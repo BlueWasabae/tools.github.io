@@ -11,6 +11,15 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // Dynamic Bridge Routing (Local MT5 IPC or Cloud Web Cockpit)
+    const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? ''
+      : (localStorage.getItem('bluex_bridge_url') || 'http://127.0.0.1:8000');
+
+    function apiFetch(endpoint, options = {}) {
+      const url = endpoint.startsWith('http') ? endpoint : (API_BASE + endpoint);
+      return fetch(url, options);
+    }
     tailwind.config = {
       darkMode: 'class',
       theme: {
@@ -627,6 +636,15 @@
   <!-- JAVASCRIPT ENGINE & REAL DATA PIPELINE -->
   <!-- ========================================================================= -->
   <script>
+    // Dynamic Bridge Routing (Local MT5 IPC or Cloud Web Cockpit)
+    const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? ''
+      : (localStorage.getItem('bluex_bridge_url') || 'http://127.0.0.1:8000');
+
+    function apiFetch(endpoint, options = {}) {
+      const url = endpoint.startsWith('http') ? endpoint : (API_BASE + endpoint);
+      return fetch(url, options);
+    }
     // 1. Authentication Guard
     async function enforceAuth() {
       const token = localStorage.getItem('bx_auth_token');
@@ -635,7 +653,7 @@
         return;
       }
       try {
-        const res = await fetch('/api/auth/verify', {
+        const res = await apiFetch('/api/auth/verify', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         if (!res.ok) {
@@ -648,7 +666,7 @@
     async function handleSignOut() {
       try {
         const token = localStorage.getItem('bx_auth_token');
-        await fetch('/api/auth/logout', {
+        await apiFetch('/api/auth/logout', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + (token || '') }
         });
@@ -697,7 +715,7 @@
     // Toggle Auto BE @ +2RR
     async function toggleAutoBE() {
       try {
-        const res = await fetch('/api/actions/auto-be-toggle', { method: 'POST' });
+        const res = await apiFetch('/api/actions/auto-be-toggle', { method: 'POST' });
         const d = await res.json();
         currentSettings.auto_be_enabled = d.auto_be_enabled;
         updateAutoBEUI(d.auto_be_enabled);
@@ -781,7 +799,7 @@
 
     async function syncSettings() {
       try {
-        await fetch('/api/settings', {
+        await apiFetch('/api/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(currentSettings)
@@ -792,7 +810,7 @@
     // Accounts
     async function loadAccountsList() {
       try {
-        const res = await fetch('/api/accounts');
+        const res = await apiFetch('/api/accounts');
         const data = await res.json();
         registeredAccounts = data.accounts || [];
 
@@ -827,7 +845,7 @@
       if (!accId) return;
       showToast("Connecting MT5 to selected account...");
       try {
-        const res = await fetch(`/api/accounts/${accId}/switch`, { method: 'POST' });
+        const res = await apiFetch(`/api/accounts/${accId}/switch`, { method: 'POST' });
         const d = await res.json();
         if (d.status === 'success') {
           showToast(`Active MT5 Terminal: #${d.active_account.login}`);
@@ -848,7 +866,7 @@
       const path = document.getElementById('new-acc-path').value;
 
       try {
-        const res = await fetch('/api/accounts', {
+        const res = await apiFetch('/api/accounts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, login, password, server, path })
@@ -866,7 +884,7 @@
     async function handleDeleteAccount(accId) {
       if (!confirm("Delete this MT5 account from terminal registry?")) return;
       try {
-        await fetch(`/api/accounts/${accId}`, { method: 'DELETE' });
+        await apiFetch(`/api/accounts/${accId}`, { method: 'DELETE' });
         showToast("Account removed.");
         loadAccountsList();
       } catch (e) {}
@@ -875,7 +893,7 @@
     // Tactical Actions
     async function generateSimulatedSignal() {
       try {
-        await fetch('/api/signals/simulate', { method: 'POST' });
+        await apiFetch('/api/signals/simulate', { method: 'POST' });
         showToast("Institutional S&D signal generated!");
         refreshState();
       } catch (e) {}
@@ -883,7 +901,7 @@
 
     async function approveSignal(id) {
       try {
-        await fetch(`/api/signals/${id}/approve`, { method: 'POST' });
+        await apiFetch(`/api/signals/${id}/approve`, { method: 'POST' });
         showToast("✅ Limit Order Approved & Dispatched to MT5!");
         refreshState();
       } catch (e) {}
@@ -891,7 +909,7 @@
 
     async function declineSignal(id) {
       try {
-        await fetch(`/api/signals/${id}/reject`, { method: 'POST' });
+        await apiFetch(`/api/signals/${id}/reject`, { method: 'POST' });
         showToast("❌ Signal Declined.");
         refreshState();
       } catch (e) {}
@@ -900,7 +918,7 @@
     async function executeMoveBEAll() {
       if (!confirm("Move all profitable positions to Breakeven (+ spread buffer)?")) return;
       try {
-        const res = await fetch('/api/actions/be-all', { method: 'POST' });
+        const res = await apiFetch('/api/actions/be-all', { method: 'POST' });
         const d = await res.json();
         showToast(d.message || "BE command executed.");
         refreshState();
@@ -910,7 +928,7 @@
     async function executeEmergencyCloseAll() {
       if (!confirm("🚨 EMERGENCY KILL SWITCH: Close 100% of open market orders and delete all limit orders?")) return;
       try {
-        const res = await fetch('/api/actions/close-all', { method: 'POST' });
+        const res = await apiFetch('/api/actions/close-all', { method: 'POST' });
         const d = await res.json();
         showToast(d.message || "Close All executed.");
         refreshState();
@@ -927,7 +945,7 @@
       const tp = parseFloat(tpInput.value);
 
       try {
-        const res = await fetch(`/api/positions/${ticket}/modify`, {
+        const res = await apiFetch(`/api/positions/${ticket}/modify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sl, tp })
@@ -947,7 +965,7 @@
       if (isNaN(vol) || vol <= 0) return;
 
       try {
-        const res = await fetch(`/api/positions/${ticket}/close-partial`, {
+        const res = await apiFetch(`/api/positions/${ticket}/close-partial`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ volume: vol })
@@ -962,7 +980,7 @@
 
     async function handleMoveSingleBE(ticket) {
       try {
-        const res = await fetch(`/api/positions/${ticket}/be`, { method: 'POST' });
+        const res = await apiFetch(`/api/positions/${ticket}/be`, { method: 'POST' });
         const d = await res.json();
         showToast(d.message || `Position #${ticket} moved to BE.`);
         refreshState();
@@ -974,7 +992,7 @@
     async function closeSinglePosition(ticket) {
       if (!confirm(`Close position #${ticket}?`)) return;
       try {
-        const res = await fetch(`/api/positions/${ticket}/close`, { method: 'POST' });
+        const res = await apiFetch(`/api/positions/${ticket}/close`, { method: 'POST' });
         const d = await res.json();
         showToast(d.message || `Position #${ticket} closed.`);
         refreshState();
@@ -999,7 +1017,7 @@
     // 3. Real-time Telemetry Loop
     async function refreshState() {
       try {
-        const res = await fetch('/api/state');
+        const res = await apiFetch('/api/state');
         if (!res.ok) return;
         const data = await res.json();
 

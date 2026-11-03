@@ -55,7 +55,7 @@
   <!-- Top Executive Header -->
   <header class="border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur px-5 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
     <div class="flex items-center gap-3">
-      <a href="/" class="flex items-center gap-2 group">
+      <a href="/cockpit" class="flex items-center gap-2 group">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-black text-sm shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
           BX
         </div>
@@ -102,7 +102,7 @@
 
     <!-- Action Bar -->
     <div class="flex items-center gap-2.5">
-      <a href="/" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium transition flex items-center gap-1.5">
+      <a href="/cockpit" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium transition flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         <span>Cockpit</span>
       </a>
@@ -300,7 +300,7 @@
         return;
       }
       try {
-        const res = await fetch('/api/auth/verify', {
+        const res = await apiFetch('/api/auth/verify', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         if (!res.ok) {
@@ -332,7 +332,7 @@
     // Load available accounts for the filter dropdown
     async function loadJournalAccounts() {
       try {
-        const res = await fetch('/api/accounts');
+        const res = await apiFetch('/api/accounts');
         const data = await res.json();
         const accounts = data.accounts || [];
 
@@ -364,7 +364,7 @@
     async function fetchSingleAccountDeals(accId) {
       try {
         const url = accId ? `/api/journal/history?account_id=${accId}` : '/api/journal/history';
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         const data = await res.json();
 
         // 100% REAL Single Account Stats

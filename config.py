@@ -47,3 +47,37 @@ class AlertPayload(BaseModel):
     risk_pct: Optional[float] = Field(default=1.0, ge=0.1, le=5.0)
     magic: Optional[int] = 880101
     comment: Optional[str] = "BlueX S&D Institutional Execution"
+
+class StructureBiasPayload(BaseModel):
+    htf_4h: str
+    mtf_15m: str
+    ltf_3m_confirmation: str
+
+class SetupPayload(BaseModel):
+    direction: str
+    structure_bias: StructureBiasPayload
+    zone_type: str
+    order_type: str
+    entry_price: float
+    stop_loss: float
+    take_profit_1: float
+    take_profit_2: Optional[float] = None
+    risk_reward_ratio: float
+    sl_pips: int
+    tp_pips: int
+
+class RiskEnginePayload(BaseModel):
+    account_risk_percent: float
+    calculated_lot_size: float
+    be_trigger_level: float
+
+class InstitutionalAlertPayload(BaseModel):
+    source: str = "SMC_Genesis_Engine"
+    symbol: str
+    timeframe: str
+    timestamp: str
+    event: str
+    scenario: str
+    setup: SetupPayload
+    risk_engine: RiskEnginePayload
+    auth_token: str

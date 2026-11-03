@@ -1,0 +1,567 @@
+//@version=5
+strategy("BlueX SMC Genesis Institutional Execution Strategy [XAU/USD]", 
+         shorttitle="BlueX SMC Genesis Engine", 
+         overlay=true, 
+         initial_capital=100000, 
+         default_qty_type=strategy.cash, 
+         default_qty_value=1000, 
+         currency=currency.USD, 
+         max_boxes_count=500, 
+         max_lines_count=500, 
+         max_labels_count=500)
+
+// ==============================================================================
+// 1. ARCHITECTURAL CONFIGURATION & WEBHOOK AUTHENTICATION
+// ==============================================================================
+string G_SYS       = "Web Management Console & Webhook Gateway"
+string i_authToken = input.string("BLUEX_QUANT_SECURE_TOKEN_9981", "Panel Secret Bearer Token", group=G_SYS)
+string i_symbol    = input.string("XAUUSD", "Execution Symbol Override", group=G_SYS)
+int    i_magic     = input.int(880101, "Execution Magic Number", group=G_SYS)
+float  i_riskPct   = input.float(1.0, "Fractional Risk Per Trade (%)", minval=0.25, maxval=3.0, step=0.25, group=G_SYS)
+
+string G_TF        = "Multi-Timeframe Structure Hierarchy"
+string i_htfTf     = input.timeframe("240", "HTF Macro Bias (4H)", group=G_TF)
+string i_mtfTf     = input.timeframe("15", "MTF Anchor Timeframe (15M)", group=G_TF)
+int    i_swingLen  = input.int(5, "Swing Pivot Lookback Length", minval=2, maxval=20, group=G_TF)
+float  i_dispMult  = input.float(1.8, "Displacement Multiplier (ATR)", minval=1.0, maxval=4.0, step=0.1, group=G_TF)
+
+string G_EXEC      = "Execution Matrix (Scenarios 1, 2, 3)"
+bool   i_tradeS1   = input.bool(true, "Enable Scenario 1 (Counter-Trend Sweep)", group=G_EXEC)
+bool   i_tradeS2   = input.bool(true, "Enable Scenario 2 (Pro-Trend Pullback)", group=G_EXEC)
+bool   i_tradeS3   = input.bool(true, "Enable Scenario 3 (Momentum Continuation)", group=G_EXEC)
+float  i_minRR     = input.float(3.0, "Enforced Minimum Risk:Reward", minval=2.0, maxval=10.0, step=0.5, group=G_EXEC)
+float  i_spreadBuf = input.float(0.40, "Spread & Execution Buffer (USD)", minval=0.05, maxval=2.0, step=0.05, group=G_EXEC)
+
+// Institutional Dark-Mode Palette
+color C_DEMAND     = color.new(#00E676, 82)
+color C_DEMAND_BOR = color.new(#00E676, 15)
+color C_SUPPLY     = color.new(#FF1744, 82)
+color C_SUPPLY_BOR = color.new(#FF1744, 15)
+color C_BOS        = color.new(#00B0FF, 0)
+color C_IBOS       = color.new(#7C4DFF, 0)
+color C_SWEEP      = color.new(#FFD700, 0)
+color C_DIMMED     = color.new(#78909C, 90)
+color C_DIMMED_BOR = color.new(#78909C, 60)
+
+// ==============================================================================
+// 2. USER-DEFINED TYPES (UDTs)
+// ==============================================================================
+type SDZone
+    box   boxId
+    float topPrice
+    float bottomPrice
+    string zoneTypeStr
+    bool  isSupply
+    bool  isStrong
+    bool  isMitigated
+    bool  isInvalidated
+    int   creationBar
+    int   timeIndex
+
+// ==============================================================================
+// 3. BASELINE CALCULATIONS & MULTI-TIMEFRAME ANCHORS (NON-REPAINTING)
+// ==============================================================================
+float atr14        = ta.atr(14)
+float candleBody   = math.abs(close - open)
+bool  isDisplaced  = candleBody >= (atr14 * i_dispMult)
+
+// 4H Macro Bias (Strictly non-repainting using confirmed closed bar [1])
+[htf4hClose, htf4hOpen] = request.security(
+    syminfo.tickerid, 
+    i_htfTf, 
+    [close[1], open[1]], 
+    barmerge.gaps_off, 
+    barmerge.lookahead_off
+)
+string htf4hBias = htf4hClose >= htf4hOpen ? "BULLISH" : "BEARISH"
+
+// 15M Operational Anchor (Strictly non-repainting using confirmed closed bar [1])
+f_mtf_data(int swingLength) =>
+    float m_hi   = high[1]
+    float m_lo   = low[1]
+    float m_cl   = close[1]
+    float m_op   = open[1]
+    float m_atr  = ta.atr(14)[1]
+    float m_pHi  = ta.pivothigh(high, swingLength, swingLength)[1]
+    float m_pLo  = ta.pivotlow(low, swingLength, swingLength)[1]
+    int   m_time = time[1]
+    [m_hi, m_lo, m_cl, m_op, m_atr, m_pHi, m_pLo, m_time]
+
+[mtfHigh, mtfLow, mtfClose, mtfOpen, mtfAtr, mtfPivotHighRaw, mtfPivotLowRaw, mtfTime] = request.security(
+    syminfo.tickerid, 
+    i_mtfTf, 
+    f_mtf_data(i_swingLen), 
+    barmerge.gaps_off, 
+    barmerge.lookahead_off
+)
+
+bool isNewMtfBar = ta.change(mtfTime) != 0
+
+// Persistent MTF Structure State
+var float mtfExtBOSHigh = na
+var float mtfExtBOSLow  = na
+var float mtfLastHigh   = na
+var float mtfLastLow    = na
+var int   mtfTrend      = 0      // 1 = Bullish, -1 = Bearish, 0 = Equilibrium
+var int   mtfIbosTrend  = 0
+var float mtfInternalHi = na
+var float mtfInternalLo = na
+
+var bool mtfBslSweep     = false
+var bool mtfSslSweep     = false
+var bool mtfBullBosBreak = false
+var bool mtfBearBosBreak = false
+var bool mtfBullIbosBreak= false
+var bool mtfBearIbosBreak= false
+
+if isNewMtfBar
+    mtfBslSweep      := false
+    mtfSslSweep      := false
+    mtfBullBosBreak  := false
+    mtfBearBosBreak  := false
+    mtfBullIbosBreak := false
+    mtfBearIbosBreak := false
+
+    if not na(mtfPivotHighRaw)
+        mtfLastHigh := mtfPivotHighRaw
+        if na(mtfExtBOSHigh)
+            mtfExtBOSHigh := mtfPivotHighRaw
+
+    if not na(mtfPivotLowRaw)
+        mtfLastLow := mtfPivotLowRaw
+        if na(mtfExtBOSLow)
+            mtfExtBOSLow := mtfPivotLowRaw
+
+    // Evaluate 15M External Structure (BOS)
+    if not na(mtfExtBOSHigh)
+        if mtfClose > mtfExtBOSHigh
+            mtfBullBosBreak := true
+            mtfTrend        := 1
+            mtfExtBOSHigh   := mtfLastHigh
+            mtfInternalHi   := na
+            mtfInternalLo   := na
+        else if mtfHigh > mtfExtBOSHigh and mtfClose <= mtfExtBOSHigh
+            mtfBslSweep := true
+
+    if not na(mtfExtBOSLow)
+        if mtfClose < mtfExtBOSLow
+            mtfBearBosBreak := true
+            mtfTrend        := -1
+            mtfExtBOSLow    := mtfLastLow
+            mtfInternalHi   := na
+            mtfInternalLo   := na
+        else if mtfLow < mtfExtBOSLow and mtfClose >= mtfExtBOSLow
+            mtfSslSweep := true
+
+    // Evaluate 15M Internal Structure (iBOS within BOS boundaries)
+    if not na(mtfLastHigh) and not na(mtfExtBOSHigh) and not na(mtfExtBOSLow)
+        if mtfLastHigh < mtfExtBOSHigh and mtfLastHigh > mtfExtBOSLow
+            if na(mtfInternalHi) or mtfLastHigh > mtfInternalHi
+                mtfInternalHi := mtfLastHigh
+
+    if not na(mtfLastLow) and not na(mtfExtBOSHigh) and not na(mtfExtBOSLow)
+        if mtfLastLow > mtfExtBOSLow and mtfLastLow < mtfExtBOSHigh
+            if na(mtfInternalLo) or mtfLastLow < mtfInternalLo
+                mtfInternalLo := mtfLastLow
+
+    if not na(mtfInternalHi) and mtfClose > mtfInternalHi
+        mtfBullIbosBreak := true
+        mtfIbosTrend     := 1
+        mtfInternalHi    := na
+
+    if not na(mtfInternalLo) and mtfClose < mtfInternalLo
+        mtfBearIbosBreak := true
+        mtfIbosTrend     := -1
+        mtfInternalLo    := na
+
+// Plot confirmed 15M structural breaks
+if isNewMtfBar and mtfBullBosBreak
+    line.new(bar_index - 5, mtfClose, bar_index, mtfClose, color=C_BOS, width=2, style=line.style_solid)
+    label.new(bar_index, mtfClose, "15M BOS", color=color.new(C_BOS, 100), textcolor=C_BOS, size=size.small, style=label.style_none)
+
+if isNewMtfBar and mtfBearBosBreak
+    line.new(bar_index - 5, mtfClose, bar_index, mtfClose, color=C_BOS, width=2, style=line.style_solid)
+    label.new(bar_index, mtfClose, "15M BOS", color=color.new(C_BOS, 100), textcolor=C_BOS, size=size.small, style=label.style_none)
+
+if isNewMtfBar and mtfBullIbosBreak
+    line.new(bar_index - 5, mtfClose, bar_index, mtfClose, color=C_IBOS, width=1, style=line.style_dashed)
+    label.new(bar_index, mtfClose, "15M iBOS", color=color.new(C_IBOS, 100), textcolor=C_IBOS, size=size.tiny, style=label.style_none)
+
+if isNewMtfBar and mtfBearIbosBreak
+    line.new(bar_index - 5, mtfClose, bar_index, mtfClose, color=C_IBOS, width=1, style=line.style_dashed)
+    label.new(bar_index, mtfClose, "15M iBOS", color=color.new(C_IBOS, 100), textcolor=C_IBOS, size=size.tiny, style=label.style_none)
+
+if isNewMtfBar and mtfBslSweep
+    label.new(bar_index, mtfHigh, "MTF-X (BSL)", color=color.new(C_SWEEP, 100), textcolor=C_SWEEP, size=size.small, style=label.style_label_down)
+
+if isNewMtfBar and mtfSslSweep
+    label.new(bar_index, mtfLow, "MTF-X (SSL)", color=color.new(C_SWEEP, 100), textcolor=C_SWEEP, size=size.small, style=label.style_label_up)
+
+// ==============================================================================
+// 4. LOCAL EXECUTION STRUCTURE (3M LTF)
+// ==============================================================================
+float ltfPivotHigh = ta.pivothigh(high, 3, 3)
+float ltfPivotLow  = ta.pivotlow(low, 3, 3)
+
+var float lastLtfSwingHigh = na
+var float lastLtfSwingLow  = na
+
+if not na(ltfPivotHigh)
+    lastLtfSwingHigh := ltfPivotHigh
+
+if not na(ltfPivotLow)
+    lastLtfSwingLow  := ltfPivotLow
+
+bool ltfBslSweep = not na(lastLtfSwingHigh) and (high > lastLtfSwingHigh) and (close < lastLtfSwingHigh)
+bool ltfSslSweep = not na(lastLtfSwingLow)  and (low < lastLtfSwingLow)   and (close > lastLtfSwingLow)
+
+var bool ltfBullBos = false
+var bool ltfBearBos = false
+ltfBullBos := false
+ltfBearBos := false
+
+if not na(lastLtfSwingHigh) and ta.crossover(close, lastLtfSwingHigh)
+    ltfBullBos := true
+    lastLtfSwingHigh := na
+
+if not na(lastLtfSwingLow) and ta.crossunder(close, lastLtfSwingLow)
+    ltfBearBos := true
+    lastLtfSwingLow := na
+
+// ==============================================================================
+// 5. SUPPLY & DEMAND ZONE ENGINE & LIFECYCLE TRACKING
+// ==============================================================================
+var SDZone[] activeZones = array.new<SDZone>()
+
+bool isBullDisplacement = (close > open) and isDisplaced
+bool isBearDisplacement = (close < open) and isDisplaced
+
+// Demand Formation
+if isBullDisplacement and barstate.isconfirmed
+    float dTop = math.max(high[1], math.max(open[1], close[1]))
+    float dBot = math.min(low[1], low)
+    if (dTop - dBot) < (atr14 * 0.25)
+        dTop := dBot + (atr14 * 0.40)
+    
+    box newDBox = box.new(left=bar_index - 1, top=dTop, right=bar_index + 20, bottom=dBot, 
+                          bgcolor=C_DEMAND, border_color=C_DEMAND_BOR, border_width=1)
+    array.push(activeZones, SDZone.new(newDBox, dTop, dBot, "TYPE_1_PIVOT_DEMAND", false, true, false, false, bar_index - 1, time))
+
+// Supply Formation
+if isBearDisplacement and barstate.isconfirmed
+    float sTop = math.max(high[1], high)
+    float sBot = math.min(low[1], math.min(open[1], close[1]))
+    if (sTop - sBot) < (atr14 * 0.25)
+        sBot := sTop - (atr14 * 0.40)
+
+    box newSBox = box.new(left=bar_index - 1, top=sTop, right=bar_index + 20, bottom=sBot, 
+                          bgcolor=C_SUPPLY, border_color=C_SUPPLY_BOR, border_width=1)
+    array.push(activeZones, SDZone.new(newSBox, sTop, sBot, "TYPE_1_PIVOT_SUPPLY", true, true, false, false, bar_index - 1, time))
+
+// Zone Mitigation and Invalidation Handling
+var SDZone activeFreshDemand = na
+var SDZone activeFreshSupply = na
+activeFreshDemand := na
+activeFreshSupply := na
+
+if array.size(activeZones) > 0
+    for i = array.size(activeZones) - 1 to 0
+        SDZone z = array.get(activeZones, i)
+        if not z.isInvalidated
+            if z.isSupply
+                if close > z.topPrice
+                    z.isInvalidated := true
+                    box.set_bgcolor(z.boxId, color.new(color.black, 100))
+                    box.set_border_color(z.boxId, color.new(color.black, 100))
+                else if high >= z.bottomPrice and not z.isMitigated
+                    z.isMitigated := true
+                    box.set_right(z.boxId, bar_index)
+                    box.set_bgcolor(z.boxId, C_DIMMED)
+                    box.set_border_color(z.boxId, C_DIMMED_BOR)
+                else if not z.isMitigated
+                    box.set_right(z.boxId, bar_index + 5)
+                    activeFreshSupply := z
+            else
+                if close < z.bottomPrice
+                    z.isInvalidated := true
+                    box.set_bgcolor(z.boxId, color.new(color.black, 100))
+                    box.set_border_color(z.boxId, color.new(color.black, 100))
+                else if low <= z.topPrice and not z.isMitigated
+                    z.isMitigated := true
+                    box.set_right(z.boxId, bar_index)
+                    box.set_bgcolor(z.boxId, C_DIMMED)
+                    box.set_border_color(z.boxId, C_DIMMED_BOR)
+                else if not z.isMitigated
+                    box.set_right(z.boxId, bar_index + 5)
+                    activeFreshDemand := z
+
+if array.size(activeZones) > 40
+    SDZone oldZ = array.shift(activeZones)
+    box.delete(oldZ.boxId)
+
+// ==============================================================================
+// 6. SERIALIZATION ENGINE (STANDARDIZED INSTITUTIONAL JSON SCHEMA)
+// ==============================================================================
+f_serialize_institutional_alert(
+    string scenarioId,
+    string directionStr,
+    string htf4h,
+    string mtf15m,
+    string ltf3m,
+    string zoneType,
+    string orderType,
+    float  entryPrice,
+    float  stopLoss,
+    float  tp1,
+    float  tp2,
+    float  rrRatio,
+    float  riskPct,
+    float  lotSize,
+    float  beLevel,
+    string token
+) =>
+    int slPips = int(math.round(math.abs(entryPrice - stopLoss) * 10.0))
+    int tpPips = int(math.round(math.abs(entryPrice - tp1) * 10.0))
+
+    string json = "{" +
+      '"source":"SMC_Genesis_Engine",' +
+      '"symbol":"{{ticker}}",' +
+      '"timeframe":"{{interval}}",' +
+      '"timestamp":"{{timenow}}",' +
+      '"event":"LIMIT_ORDER_PLACED",' +
+      '"scenario":"' + scenarioId + '",' +
+      '"setup":{' +
+        '"direction":"' + directionStr + '",' +
+        '"structure_bias":{' +
+          '"htf_4h":"' + htf4h + '",' +
+          '"mtf_15m":"' + mtf15m + '",' +
+          '"ltf_3m_confirmation":"' + ltf3m + '"' +
+        '},' +
+        '"zone_type":"' + zoneType + '",' +
+        '"order_type":"' + orderType + '",' +
+        '"entry_price":' + str.tostring(entryPrice, "#.##") + ',' +
+        '"stop_loss":' + str.tostring(stopLoss, "#.##") + ',' +
+        '"take_profit_1":' + str.tostring(tp1, "#.##") + ',' +
+        '"take_profit_2":' + str.tostring(tp2, "#.##") + ',' +
+        '"risk_reward_ratio":' + str.tostring(rrRatio, "#.#") + ',' +
+        '"sl_pips":' + str.tostring(slPips) + ',' +
+        '"tp_pips":' + str.tostring(tpPips) +
+      '},' +
+      '"risk_engine":{' +
+        '"account_risk_percent":' + str.tostring(riskPct, "#.#") + ',' +
+        '"calculated_lot_size":' + str.tostring(lotSize, "#.##") + ',' +
+        '"be_trigger_level":' + str.tostring(beLevel, "#.##") +
+      '},' +
+      '"auth_token":"' + token + '"' +
+    "}"
+    json
+
+// ==============================================================================
+// 7. EXECUTION SCENARIOS (1, 2, 3) & TELEMETRY TRANSMISSION
+// ==============================================================================
+var float targetEntry = na
+var float targetSL    = na
+var float targetTP1   = na
+var float targetTP2   = na
+var float targetBE    = na
+var string activeScenarioTag = "NONE"
+var string activeZoneType    = "NONE"
+var string activeMtfBiasDesc = "EQUILIBRIUM"
+
+bool triggerBuyLimit  = false
+bool triggerSellLimit = false
+
+// SCENARIO 1: Counter-Trend External Sweep Reversal
+if i_tradeS1 and barstate.isconfirmed
+    if mtfSslSweep and ltfBullBos and not na(activeFreshDemand)
+        triggerBuyLimit   := true
+        activeScenarioTag := "SCENARIO_1_COUNTER_TREND_SWEEP"
+        activeZoneType    := "TYPE_1_PIVOT_DEMAND"
+        activeMtfBiasDesc := "BEARISH_SWEEP_REVERSAL"
+        targetEntry       := activeFreshDemand.topPrice + i_spreadBuf
+        targetSL          := activeFreshDemand.bottomPrice - (atr14 * 0.5) - i_spreadBuf
+        float rDist       = targetEntry - targetSL
+        targetTP1         := targetEntry + (rDist * i_minRR)
+        targetTP2         := not na(mtfExtBOSHigh) ? mtfExtBOSHigh : (targetEntry + (rDist * (i_minRR + 1.5)))
+        targetBE          := targetEntry + (rDist * 1.33)
+
+    if mtfBslSweep and ltfBearBos and not na(activeFreshSupply)
+        triggerSellLimit  := true
+        activeScenarioTag := "SCENARIO_1_COUNTER_TREND_SWEEP"
+        activeZoneType    := "TYPE_1_PIVOT_SUPPLY"
+        activeMtfBiasDesc := "BULLISH_SWEEP_REVERSAL"
+        targetEntry       := activeFreshSupply.bottomPrice - i_spreadBuf
+        targetSL          := activeFreshSupply.topPrice + (atr14 * 0.5) + i_spreadBuf
+        float rDist       = targetSL - targetEntry
+        targetTP1         := targetEntry - (rDist * i_minRR)
+        targetTP2         := not na(mtfExtBOSLow) ? mtfExtBOSLow : (targetEntry - (rDist * (i_minRR + 1.5)))
+        targetBE          := targetEntry - (rDist * 1.33)
+
+// SCENARIO 2: Pro-Trend Pullback into Fresh MTF Strong Zone
+if i_tradeS2 and barstate.isconfirmed and not triggerBuyLimit and not triggerSellLimit
+    if mtfTrend == 1 and not na(activeFreshDemand)
+        if low <= (activeFreshDemand.topPrice + (atr14 * 0.5)) and ltfBullBos
+            triggerBuyLimit   := true
+            activeScenarioTag := "SCENARIO_2_PRO_TREND_PULLBACK"
+            activeZoneType    := "TYPE_1_PIVOT_DEMAND"
+            activeMtfBiasDesc := "BULLISH_PULLBACK_MITIGATED"
+            targetEntry       := activeFreshDemand.topPrice + i_spreadBuf
+            targetSL          := activeFreshDemand.bottomPrice - (atr14 * 0.5) - i_spreadBuf
+            float rDist       = targetEntry - targetSL
+            targetTP1         := targetEntry + (rDist * i_minRR)
+            targetTP2         := not na(mtfExtBOSHigh) ? mtfExtBOSHigh : (targetEntry + (rDist * 4.0))
+            targetBE          := targetEntry + (rDist * 1.33)
+
+    if mtfTrend == -1 and not na(activeFreshSupply)
+        if high >= (activeFreshSupply.bottomPrice - (atr14 * 0.5)) and ltfBearBos
+            triggerSellLimit  := true
+            activeScenarioTag := "SCENARIO_2_PRO_TREND_PULLBACK"
+            activeZoneType    := "TYPE_1_PIVOT_SUPPLY"
+            activeMtfBiasDesc := "BEARISH_PULLBACK_MITIGATED"
+            targetEntry       := activeFreshSupply.bottomPrice - i_spreadBuf
+            targetSL          := activeFreshSupply.topPrice + (atr14 * 0.5) + i_spreadBuf
+            float rDist       = targetSL - targetEntry
+            targetTP1         := targetEntry - (rDist * i_minRR)
+            targetTP2         := not na(mtfExtBOSLow) ? mtfExtBOSLow : (targetEntry - (rDist * 4.0))
+            targetBE          := targetEntry - (rDist * 1.33)
+
+// SCENARIO 3: Immediate Momentum Continuation (Clean Displacement with Zero Sweep)
+if i_tradeS3 and barstate.isconfirmed and not triggerBuyLimit and not triggerSellLimit
+    bool cleanBullBreakout = mtfBullBosBreak and not mtfBslSweep and not ltfBslSweep
+    bool cleanBearBreakout = mtfBearBosBreak and not mtfSslSweep and not ltfSslSweep
+
+    if cleanBullBreakout and not na(activeFreshDemand)
+        triggerBuyLimit   := true
+        activeScenarioTag := "SCENARIO_3_MOMENTUM_CONTINUATION"
+        activeZoneType    := "TYPE_2_CANDLE_DEMAND"
+        activeMtfBiasDesc := "BULLISH_EXPANSION"
+        targetEntry       := activeFreshDemand.topPrice + i_spreadBuf
+        targetSL          := activeFreshDemand.bottomPrice - (atr14 * 0.4) - i_spreadBuf
+        float rDist       = targetEntry - targetSL
+        targetTP1         := targetEntry + (rDist * i_minRR)
+        targetTP2         := targetEntry + (rDist * (i_minRR + 2.0))
+        targetBE          := targetEntry + (rDist * 1.33)
+
+    if cleanBearBreakout and not na(activeFreshSupply)
+        triggerSellLimit  := true
+        activeScenarioTag := "SCENARIO_3_MOMENTUM_CONTINUATION"
+        activeZoneType    := "TYPE_2_CANDLE_SUPPLY"
+        activeMtfBiasDesc := "BEARISH_EXPANSION"
+        targetEntry       := activeFreshSupply.bottomPrice - i_spreadBuf
+        targetSL          := activeFreshSupply.topPrice + (atr14 * 0.4) + i_spreadBuf
+        float rDist       = targetSL - targetEntry
+        targetTP1         := targetEntry - (rDist * i_minRR)
+        targetTP2         := targetEntry - (rDist * (i_minRR + 2.0))
+        targetBE          := targetEntry - (rDist * 1.33)
+
+// ==============================================================================
+// 8. DYNAMIC POSITION SIZING & TRANSMISSION
+// ==============================================================================
+float riskCapital   = strategy.equity * (i_riskPct / 100.0)
+float pointValueUSD = syminfo.pointvalue
+
+var line entryLine = na
+var line slLine    = na
+var line tpLine    = na
+
+if triggerBuyLimit and barstate.isconfirmed
+    float slDistance = math.abs(targetEntry - targetSL)
+    float riskPerOz  = slDistance * pointValueUSD
+    float calcQty    = riskPerOz > 0.0 ? (riskCapital / riskPerOz) : 0.01
+    calcQty          := math.max(0.01, math.round(calcQty, 2))
+
+    string buyAlertJson = f_serialize_institutional_alert(
+        activeScenarioTag,
+        "BUY",
+        htf4hBias,
+        activeMtfBiasDesc,
+        "CONFIRMED_BOS",
+        activeZoneType,
+        "BUY_LIMIT",
+        targetEntry,
+        targetSL,
+        targetTP1,
+        targetTP2,
+        i_minRR,
+        i_riskPct,
+        calcQty,
+        targetBE,
+        i_authToken
+    )
+
+    strategy.entry("Long Limit", strategy.long, limit=targetEntry, qty=calcQty, alert_message=buyAlertJson)
+    strategy.exit("Exit Long", from_entry="Long Limit", stop=targetSL, limit=targetTP1, alert_message=buyAlertJson)
+    alert(buyAlertJson, alert.freq_once_per_bar_close)
+
+    line.delete(entryLine)
+    line.delete(slLine)
+    line.delete(tpLine)
+    entryLine := line.new(bar_index, targetEntry, bar_index + 15, targetEntry, color=color.green, width=2, style=line.style_solid)
+    slLine    := line.new(bar_index, targetSL, bar_index + 15, targetSL, color=color.red, width=2, style=line.style_solid)
+    tpLine    := line.new(bar_index, targetTP1, bar_index + 15, targetTP1, color=color.yellow, width=2, style=line.style_solid)
+
+if triggerSellLimit and barstate.isconfirmed
+    float slDistance = math.abs(targetSL - targetEntry)
+    float riskPerOz  = slDistance * pointValueUSD
+    float calcQty    = riskPerOz > 0.0 ? (riskCapital / riskPerOz) : 0.01
+    calcQty          := math.max(0.01, math.round(calcQty, 2))
+
+    string sellAlertJson = f_serialize_institutional_alert(
+        activeScenarioTag,
+        "SELL",
+        htf4hBias,
+        activeMtfBiasDesc,
+        "CONFIRMED_BOS",
+        activeZoneType,
+        "SELL_LIMIT",
+        targetEntry,
+        targetSL,
+        targetTP1,
+        targetTP2,
+        i_minRR,
+        i_riskPct,
+        calcQty,
+        targetBE,
+        i_authToken
+    )
+
+    strategy.entry("Sell Limit", strategy.short, limit=targetEntry, qty=calcQty, alert_message=sellAlertJson)
+    strategy.exit("Exit Short", from_entry="Sell Limit", stop=targetSL, limit=targetTP1, alert_message=sellAlertJson)
+    alert(sellAlertJson, alert.freq_once_per_bar_close)
+
+    line.delete(entryLine)
+    line.delete(slLine)
+    line.delete(tpLine)
+    entryLine := line.new(bar_index, targetEntry, bar_index + 15, targetEntry, color=color.orange, width=2, style=line.style_solid)
+    slLine    := line.new(bar_index, targetSL, bar_index + 15, targetSL, color=color.red, width=2, style=line.style_solid)
+    tpLine    := line.new(bar_index, targetTP1, bar_index + 15, targetTP1, color=color.yellow, width=2, style=line.style_solid)
+
+// ==============================================================================
+// 9. TELEMETRY COCKPIT HUD
+// ==============================================================================
+var table cockpitHud = table.new(position.top_right, 2, 7, bgcolor=color.new(#0d121d, 12), border_color=color.new(#1e293b, 0), border_width=1)
+
+if barstate.islast
+    string mtfTrendStr = mtfTrend == 1 ? "BULLISH" : (mtfTrend == -1 ? "BEARISH" : "EQUILIBRIUM")
+    color  mtfTrendCol = mtfTrend == 1 ? color.green : (mtfTrend == -1 ? color.red : color.gray)
+    
+    table.cell(cockpitHud, 0, 0, "BlueX SMC Genesis Gateway", bgcolor=color.new(#131b29, 0), text_color=color.white, text_size=size.small)
+    table.cell(cockpitHud, 1, 0, "Status: Online", bgcolor=color.new(#131b29, 0), text_color=color.green, text_size=size.small)
+
+    table.cell(cockpitHud, 0, 1, "4H Macro Bias", text_color=color.gray, text_size=size.tiny)
+    table.cell(cockpitHud, 1, 1, htf4hBias, text_color=(htf4hBias == "BULLISH" ? color.green : color.red), text_size=size.tiny)
+
+    table.cell(cockpitHud, 0, 2, "15M Anchor Trend", text_color=color.gray, text_size=size.tiny)
+    table.cell(cockpitHud, 1, 2, mtfTrendStr, text_color=mtfTrendCol, text_size=size.tiny)
+
+    table.cell(cockpitHud, 0, 3, "Last Active Setup", text_color=color.gray, text_size=size.tiny)
+    table.cell(cockpitHud, 1, 3, activeScenarioTag, text_color=color.yellow, text_size=size.tiny)
+
+    table.cell(cockpitHud, 0, 4, "Risk Allocation", text_color=color.gray, text_size=size.tiny)
+    table.cell(cockpitHud, 1, 4, str.tostring(i_riskPct, "#.#") + "% ($" + str.tostring(riskCapital, "#,###") + ")", text_color=color.white, text_size=size.tiny)
+
+    table.cell(cockpitHud, 0, 5, "Target Minimum R:R", text_color=color.gray, text_size=size.tiny)
+    table.cell(cockpitHud, 1, 5, "1:" + str.tostring(i_minRR, "#.#"), text_color=color.aqua, text_size=size.tiny)
+
+    table.cell(cockpitHud, 0, 6, "BE Trigger Multiple", text_color=color.gray, text_size=size.tiny)
+    table.cell(cockpitHud, 1, 6, "+1.33R Structural Push", text_color=color.orange, text_size=size.tiny)

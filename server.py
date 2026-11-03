@@ -8,18 +8,19 @@ import sys
 import time
 import uuid
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
 # Ensure directory is in sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, HTTPException, status, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import uvicorn
 
-from config import SystemConfig, AlertPayload
+from config import SystemConfig, AlertPayload, InstitutionalAlertPayload
 from mt5_engine import MT5ExecutionEngine
 from account_manager import AccountManager
 
@@ -34,6 +35,14 @@ app = FastAPI(
     title="BlueX Quantitative Execution & Control Terminal",
     description="Microsecond Webhook Execution Gateway & Interactive Cockpit for MT5/MT4",
     version="3.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # MT5 Engine & Account Manager Instances
@@ -167,6 +176,7 @@ async def auth_verify(request: Request):
 
 @app.get("/")
 @app.get("/terminal")
+@app.get("/cockpit")
 @app.get("/dashboard")
 @app.get("/dashboard/sales")
 async def serve_terminal():
@@ -475,40 +485,87 @@ async def reject_signal(signal_id: str):
 # ==============================================================================
 
 @app.post("/webhook")
-async def handle_tradingview_webhook(payload: AlertPayload, request: Request):
+async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, AlertPayload], request: Request):
     """
-    Primary ingress for TradingView alerts and BlueX Market Scanner.
+    Primary ingress for TradingView alerts, SMC Genesis Institutional Engine, and BlueX Market Scanner.
     - If execution_mode == "AUTO": Direct microsecond execution to MT5.
     - If execution_mode == "MANUAL": Pushes to Signal Approval Queue.
     """
     t_start = time.perf_counter()
 
-    if payload.secret != config.WEBHOOK_SECRET_KEY:
+    # Normalize InstitutionalAlertPayload or AlertPayload into uniform execution parameters
+    if isinstance(payload, InstitutionalAlertPayload):
+        token = payload.auth_token
+        action = payload.setup.order_type
+        symbol = payload.symbol
+        entry = payload.setup.entry_price
+        sl = payload.setup.stop_loss
+        tp1 = payload.setup.take_profit_1
+        tp2 = payload.setup.take_profit_2
+        risk_pct = payload.risk_engine.account_risk_percent
+        precalc_lots = payload.risk_engine.calculated_lot_size
+        comment = f"SMC Genesis {payload.scenario}"
+        scenario_tag = payload.scenario
+        zone_type = payload.setup.zone_type
+        structure_bias = payload.setup.structure_bias.dict()
+        be_trigger = payload.risk_engine.be_trigger_level
+        magic = config.MAGIC_NUMBER_BASE + 101
+    else:
+        token = payload.secret
+        action = payload.action
+        symbol = payload.symbol
+        entry = payload.entry
+        sl = payload.sl
+        tp1 = payload.tp1
+        tp2 = payload.tp2
+        risk_pct = payload.risk_pct
+        precalc_lots = None
+        comment = payload.comment or "BlueX S&D Institutional Execution"
+        scenario_tag = "STANDARD"
+        zone_type = "STANDARD"
+        structure_bias = {}
+        be_trigger = None
+        magic = payload.magic or (config.MAGIC_NUMBER_BASE + 101)
+
+    if token != config.WEBHOOK_SECRET_KEY:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid secret token")
 
-    action_upper = payload.action.upper()
+    action_upper = action.upper()
+
+    exec_alert = AlertPayload(
+        secret=token,
+        symbol=symbol,
+        action=action_upper,
+        entry=entry,
+        sl=sl,
+        tp1=tp1,
+        tp2=tp2,
+        risk_pct=risk_pct,
+        magic=magic,
+        comment=comment
+    )
 
     # Invalidation cancellations or closures bypass approval queue and execute immediately
     if action_upper in ["CANCEL", "CANCEL_ALL", "CLOSE_ALL", "CLOSE_PARTIAL"]:
-        res = mt5_engine.execute_alert(payload)
+        res = mt5_engine.execute_alert(exec_alert)
         return {"action": action_upper, "result": res}
 
     # Dynamic Risk Percentage Assignment
-    payload.risk_pct = cockpit_state["custom_risk_pct"]
+    exec_alert.risk_pct = cockpit_state["custom_risk_pct"]
 
     # Dynamically scale TP1 if target_rr was altered
-    if payload.entry and payload.sl:
-        risk_delta = abs(payload.entry - payload.sl)
+    if exec_alert.entry and exec_alert.sl:
+        risk_delta = abs(exec_alert.entry - exec_alert.sl)
         if "BUY" in action_upper:
-            payload.tp1 = round(payload.entry + (risk_delta * cockpit_state["target_rr"]), 2)
+            exec_alert.tp1 = round(exec_alert.entry + (risk_delta * cockpit_state["target_rr"]), 2)
         else:
-            payload.tp1 = round(payload.entry - (risk_delta * cockpit_state["target_rr"]), 2)
+            exec_alert.tp1 = round(exec_alert.entry - (risk_delta * cockpit_state["target_rr"]), 2)
 
     # 1. Automated Execution Mode
     if cockpit_state["execution_mode"] == "AUTO":
-        mt5_result = mt5_engine.execute_alert(payload)
+        mt5_result = mt5_engine.execute_alert(exec_alert)
         elapsed_ms = (time.perf_counter() - t_start) * 1000.0
-        logger.info(f"[AUTO-EXECUTION COMPLETE] {action_upper} on {payload.symbol} in {elapsed_ms:.2f}ms")
+        logger.info(f"[AUTO-EXECUTION COMPLETE] {action_upper} on {exec_alert.symbol} in {elapsed_ms:.2f}ms")
         return {
             "mode": "AUTO",
             "latency_ms": round(elapsed_ms, 2),
@@ -521,38 +578,44 @@ async def handle_tradingview_webhook(payload: AlertPayload, request: Request):
     # Calculate exact zone-based lot sizing before approval
     acc = mt5_engine.get_account_summary()
     equity = acc.get("equity", 10000.0) if acc.get("connected") else 10000.0
-    cash_risk = equity * (payload.risk_pct / 100.0)
-    risk_delta = abs(payload.entry - payload.sl) if (payload.entry and payload.sl) else 4.0
+    cash_risk = equity * (exec_alert.risk_pct / 100.0)
+    risk_delta = abs(exec_alert.entry - exec_alert.sl) if (exec_alert.entry and exec_alert.sl) else 4.0
     contract_size = 100.0
-    calc_lots = round(max(0.01, min(100.0, cash_risk / (risk_delta * contract_size))), 2)
+    calc_lots = precalc_lots if precalc_lots else round(max(0.01, min(100.0, cash_risk / (risk_delta * contract_size))), 2)
 
     sig_record = {
         "id": signal_id,
         "time": time.strftime("%H:%M:%S"),
-        "symbol": payload.symbol,
+        "symbol": exec_alert.symbol,
         "action": action_upper,
-        "entry": payload.entry,
-        "sl": payload.sl,
-        "tp1": payload.tp1,
-        "tp2": payload.tp2,
-        "risk_pct": payload.risk_pct,
+        "entry": exec_alert.entry,
+        "sl": exec_alert.sl,
+        "tp1": exec_alert.tp1,
+        "tp2": exec_alert.tp2,
+        "risk_pct": exec_alert.risk_pct,
         "cash_risk": round(cash_risk, 2),
         "calc_lots": calc_lots,
         "zone_depth": round(risk_delta - (cockpit_state["spread_buffer_usd"] * 2.0), 2),
-        "magic": payload.magic,
-        "comment": payload.comment
+        "zone_type": zone_type,
+        "scenario": scenario_tag,
+        "structure_bias": structure_bias,
+        "be_trigger_level": be_trigger,
+        "magic": exec_alert.magic,
+        "comment": exec_alert.comment
     }
     cockpit_state["pending_signals"].insert(0, sig_record)
     if len(cockpit_state["pending_signals"]) > 20:
         cockpit_state["pending_signals"].pop()
 
-    logger.info(f"[SIGNAL ENQUEUED FOR APPROVAL] ID: {signal_id} | {action_upper} @ {payload.entry} | Lots: {calc_lots}")
+    logger.info(f"[SIGNAL ENQUEUED FOR APPROVAL] ID: {signal_id} | {action_upper} @ {exec_alert.entry} | Lots: {calc_lots} | Scenario: {scenario_tag}")
     return {
         "mode": "MANUAL",
         "signal_id": signal_id,
         "calculated_lots": calc_lots,
         "cash_risk": round(cash_risk, 2),
+        "scenario": scenario_tag,
         "message": "Signal held in queue awaiting operator approval"
+    }
     }
 
 @app.post("/api/signals/simulate")
