@@ -1,0 +1,597 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlueX Institutional Trading Journal | Real S&D Lifecycle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: '#090d16',
+            card: '#0f172a',
+            border: '#1e293b',
+            muted: '#1e293b',
+            'muted-foreground': '#94a3b8',
+            primary: '#f59e0b',
+            'primary-foreground': '#000000',
+            accent: '#38bdf8'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #060911;
+      color: #f1f5f9;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#060911] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- Top Executive Header -->
+  <header class="border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur px-5 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <a href="/" class="flex items-center gap-2 group">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-black text-sm shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+          BX
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold tracking-tight text-white">BlueX Institutional Terminal</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">REAL JOURNAL</span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-mono">Single-Account Real Deal Audit • XAU/USD Execution Log</p>
+        </div>
+      </a>
+    </div>
+
+    <!-- Account Filter Option (Single Account Selector) -->
+    <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-1.5 font-mono text-xs">
+      <span class="text-slate-400 font-bold uppercase text-[10px]">Filter Account:</span>
+      <select id="journal-account-filter" onchange="handleJournalAccountChange(this.value)" class="bg-transparent text-cyan-400 font-bold outline-none cursor-pointer">
+        <option value="">Loading accounts...</option>
+      </select>
+    </div>
+
+    <!-- Single Account Real Stats Ticker (Zero Mock Data) -->
+    <div class="hidden xl:flex items-center gap-6 text-xs font-mono bg-slate-900/80 px-4 py-1.5 rounded-lg border border-slate-800">
+      <div>
+        <span class="text-slate-400">Account Real Net PnL:</span>
+        <span class="font-bold ml-1.5" id="stats-net-pnl">$0.00</span>
+      </div>
+      <div class="w-px h-3 bg-slate-800"></div>
+      <div>
+        <span class="text-slate-400">Closed Deals:</span>
+        <span class="font-bold text-white ml-1.5" id="stats-deals-count">0</span>
+      </div>
+      <div class="w-px h-3 bg-slate-800"></div>
+      <div>
+        <span class="text-slate-400">Win Rate:</span>
+        <span class="font-bold text-purple-400 ml-1.5" id="stats-win-rate">0.0%</span>
+      </div>
+      <div class="w-px h-3 bg-slate-800"></div>
+      <div>
+        <span class="text-slate-400">Turnover Lots:</span>
+        <span class="font-bold text-cyan-400 ml-1.5" id="stats-volume">0.00 Lots</span>
+      </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="flex items-center gap-2.5">
+      <a href="/" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium transition flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        <span>Cockpit</span>
+      </a>
+      <button onclick="openNewTradeModal()" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+        <span>Manual Audit Note</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Calendar Container -->
+  <main class="flex-1 flex flex-col p-4 md:p-6 max-w-[1700px] w-full mx-auto">
+    <!-- Calendar Controls Header -->
+    <div class="flex flex-col space-y-4 p-4 md:flex-row md:items-center md:justify-between md:space-y-0 bg-[#090d16] border border-slate-800 rounded-t-xl">
+      <div class="flex flex-auto items-center gap-4">
+        <!-- Date Badge -->
+        <div class="hidden w-16 h-16 flex-col items-center justify-center rounded-lg border border-slate-800 bg-slate-900/90 p-1 md:flex shadow-inner">
+          <span id="badgeMonth" class="text-[10px] font-bold uppercase text-slate-400 font-mono">NOV</span>
+          <div class="flex w-full flex-1 items-center justify-center rounded border border-slate-800 bg-[#060911] text-lg font-black text-amber-400 font-mono">
+            <span id="badgeDay">04</span>
+          </div>
+        </div>
+        <div class="flex flex-col">
+          <h2 id="calendarTitle" class="text-xl font-bold tracking-tight text-white flex items-center gap-2 font-mono">
+            November, 2026
+          </h2>
+          <p id="calendarSubtitle" class="text-xs text-slate-400 font-mono mt-0.5">
+            Single Account Real MT5 Execution Deals Audit
+          </p>
+        </div>
+      </div>
+
+      <!-- Controls Right -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Search Filter -->
+        <div class="relative">
+          <input 
+            type="text" 
+            id="searchInput" 
+            oninput="renderCalendar()"
+            placeholder="Filter ticket, symbol..." 
+            class="bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 w-48 font-mono"
+          />
+          <svg class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+
+        <div class="h-6 w-px bg-slate-800 hidden md:block"></div>
+
+        <!-- Month Navigation -->
+        <div class="inline-flex rounded-lg border border-slate-800 bg-slate-900/80 p-0.5 shadow-sm font-mono text-xs">
+          <button 
+            onclick="changeMonth(-1)" 
+            class="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+            title="Previous Month"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button 
+            onclick="jumpToday()" 
+            class="px-3 py-1 hover:bg-slate-800 rounded text-slate-200 font-semibold transition"
+          >
+            Today
+          </button>
+          <button 
+            onclick="changeMonth(1)" 
+            class="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+            title="Next Month"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Grid Frame -->
+    <div class="flex-1 flex flex-col border-x border-b border-slate-800 bg-[#090d16] rounded-b-xl shadow-2xl overflow-hidden">
+      <div class="grid grid-cols-7 border-b border-slate-800 text-center text-xs font-mono font-semibold text-slate-400 bg-slate-900/50">
+        <div class="border-r border-slate-800/80 py-2.5">SUN</div>
+        <div class="border-r border-slate-800/80 py-2.5">MON</div>
+        <div class="border-r border-slate-800/80 py-2.5">TUE</div>
+        <div class="border-r border-slate-800/80 py-2.5">WED</div>
+        <div class="border-r border-slate-800/80 py-2.5">THU</div>
+        <div class="border-r border-slate-800/80 py-2.5">FRI</div>
+        <div class="py-2.5">SAT</div>
+      </div>
+
+      <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr flex-1 divide-x divide-y divide-slate-800/60 min-h-[640px]"></div>
+    </div>
+  </main>
+
+  <!-- Deal Details Slide-over / Modal -->
+  <div id="tradeModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+            REAL MT5 EXECUTION RECEIPT
+          </span>
+          <h3 id="modalTitle" class="text-lg font-bold text-white mt-1">Deal Details</h3>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs">
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 text-[10px] block">ASSET & DIR</span>
+          <span id="modalAsset" class="font-bold text-white text-sm">XAUUSD BUY</span>
+        </div>
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 text-[10px] block">REALIZED MONEY (PNL)</span>
+          <span id="modalPnl" class="font-bold text-emerald-400 text-sm">+$0.00</span>
+        </div>
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 text-[10px] block">VOLUME</span>
+          <span id="modalVolume" class="font-bold text-amber-400 text-sm">1.00 Lots</span>
+        </div>
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 text-[10px] block">DEAL TICKET</span>
+          <span id="modalTicket" class="font-semibold text-slate-200">#0</span>
+        </div>
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 text-[10px] block">EXECUTION PRICE</span>
+          <span id="modalPrice" class="font-semibold text-cyan-400">0.00</span>
+        </div>
+        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 text-[10px] block">EXECUTION TIME</span>
+          <span id="modalTime" class="font-semibold text-slate-300">N/A</span>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/60 p-3.5 rounded-lg border border-slate-800/80 text-xs">
+        <div class="text-[11px] font-mono font-semibold text-slate-400 mb-1 flex items-center justify-between">
+          <span>BROKER / S&D NOTES</span>
+          <span id="modalComment" class="text-amber-400 font-mono">MetaTrader 5 Deal</span>
+        </div>
+        <p id="modalNotes" class="text-slate-300 leading-relaxed font-sans">
+          Deal execution logged directly from terminal IPC bridge.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="closeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Audit Note Modal -->
+  <div id="newTradeModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-[#0f172a] border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span class="text-amber-400">⚡</span> Log Manual Audit Note
+        </h3>
+        <button onclick="closeNewTradeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="newTradeForm" onsubmit="saveTradeEntry(event)" class="space-y-3.5 text-xs font-mono">
+        <div>
+          <label class="block text-slate-400 mb-1">Audit Date & Time</label>
+          <input type="datetime-local" id="entryDatetime" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" />
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Title / Formation Tag</label>
+          <input type="text" id="entryFormation" placeholder="e.g. DBR Demand Origin / SSL Sweep" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 font-bold" />
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Net Realized PnL ($)</label>
+          <input type="number" step="0.01" id="entryPnl" placeholder="0.00" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" />
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Operator Notes</label>
+          <textarea id="entryNotes" rows="3" placeholder="Displacement candle validation, spread buffer applied, full body close BOS..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-amber-500 font-sans"></textarea>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" onclick="closeNewTradeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold transition shadow-md shadow-amber-500/20">Save Note</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Real Data Journal Engine -->
+  <script>
+    // Enforce Authentication
+    async function enforceAuth() {
+      const token = localStorage.getItem('bx_auth_token');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/verify', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          localStorage.removeItem('bx_auth_token');
+          window.location.href = '/login';
+        }
+      } catch(e) {}
+    }
+
+    let currentSelectedAccountId = "";
+    let activeDeals = [];
+    let currentDate = new Date(2026, 10, 4);
+
+    const MONTH_NAMES = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function jumpToday() {
+      currentDate = new Date();
+      renderCalendar();
+    }
+
+    // Load available accounts for the filter dropdown
+    async function loadJournalAccounts() {
+      try {
+        const res = await fetch('/api/accounts');
+        const data = await res.json();
+        const accounts = data.accounts || [];
+
+        const select = document.getElementById('journal-account-filter');
+        select.innerHTML = accounts.map(a => `
+          <option value="${a.id}" ${a.is_active ? 'selected' : ''}>
+            ${a.name} (#${a.login})
+          </option>
+        `).join('');
+
+        if (data.active_account) {
+          currentSelectedAccountId = data.active_account.id;
+        } else if (accounts.length > 0) {
+          currentSelectedAccountId = accounts[0].id;
+        }
+
+        await fetchSingleAccountDeals(currentSelectedAccountId);
+      } catch (e) {
+        console.error("Account load error:", e);
+      }
+    }
+
+    async function handleJournalAccountChange(accId) {
+      currentSelectedAccountId = accId;
+      await fetchSingleAccountDeals(accId);
+    }
+
+    // Fetch REAL deals and money records for ONLY the selected single account
+    async function fetchSingleAccountDeals(accId) {
+      try {
+        const url = accId ? `/api/journal/history?account_id=${accId}` : '/api/journal/history';
+        const res = await fetch(url);
+        const data = await res.json();
+
+        // 100% REAL Single Account Stats
+        if (data.stats) {
+          const pnl = data.stats.total_realized_pnl;
+          const pnlEl = document.getElementById('stats-net-pnl');
+          pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
+          pnlEl.className = `font-bold ml-1.5 ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+          document.getElementById('stats-deals-count').textContent = data.stats.closed_trades_count;
+          document.getElementById('stats-win-rate').textContent = `${data.stats.win_rate_pct.toFixed(1)}%`;
+          document.getElementById('stats-volume').textContent = `${data.stats.total_volume_lots.toFixed(2)} Lots`;
+        }
+
+        // Merge real deals with any stored manual audit notes for this account
+        const realDeals = (data.deals || []).map(d => ({
+          id: d.ticket,
+          ticket: d.ticket,
+          name: `${d.symbol} ${d.type} (${d.volume} Lots @ ${d.price}) [${d.net_pnl >= 0 ? '+' : ''}$${d.net_pnl.toFixed(2)}]`,
+          datetime: d.time.replace(' ', 'T'),
+          asset: d.symbol,
+          direction: d.type,
+          volume: d.volume,
+          price: d.price,
+          pnl: d.net_pnl,
+          comment: d.comment || 'MetaTrader 5 Deal',
+          notes: `Realized Net PnL: $${d.net_pnl.toFixed(2)} (Commission: $${d.commission}, Swap: $${d.swap})`
+        }));
+
+        const manualNotes = getManualNotes(currentSelectedAccountId);
+        activeDeals = [...realDeals, ...manualNotes];
+
+        renderCalendar();
+      } catch (err) {
+        console.error("Failed to fetch account journal history:", err);
+      }
+    }
+
+    function getManualNotes(accId) {
+      const key = `bx_manual_notes_${accId}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        try { return JSON.parse(stored); } catch (e) { return []; }
+      }
+      return [];
+    }
+
+    function saveManualNotes(accId, notes) {
+      localStorage.setItem(`bx_manual_notes_${accId}`, JSON.stringify(notes));
+    }
+
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      document.getElementById('calendarTitle').textContent = `${MONTH_NAMES[month]}, ${year}`;
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      document.getElementById('calendarSubtitle').textContent = 
+        `${MONTH_NAMES[month].slice(0, 3)} 1, ${year} - ${MONTH_NAMES[month].slice(0, 3)} ${lastDay.getDate()}, ${year} • Real MT5 Execution Audit`;
+
+      document.getElementById('badgeMonth').textContent = MONTH_NAMES[month].slice(0, 3).toUpperCase();
+      document.getElementById('badgeDay').textContent = String(currentDate.getDate()).padStart(2, '0');
+
+      const filterQuery = (document.getElementById('searchInput').value || '').toLowerCase();
+      const filteredDeals = activeDeals.filter(d => {
+        if (!filterQuery) return true;
+        return (d.name || '').toLowerCase().includes(filterQuery) ||
+               (d.notes || '').toLowerCase().includes(filterQuery) ||
+               String(d.ticket || '').includes(filterQuery);
+      });
+
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+
+      const endDate = new Date(lastDay);
+      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+
+      const today = new Date();
+      let iter = new Date(startDate);
+
+      while (iter <= endDate) {
+        const d = new Date(iter);
+        const isCurrentMonth = d.getMonth() === month;
+        const isToday = d.toDateString() === today.toDateString();
+        
+        const dayDeals = filteredDeals.filter(deal => {
+          const tDate = new Date(deal.datetime);
+          return tDate.getFullYear() === d.getFullYear() &&
+                 tDate.getMonth() === d.getMonth() &&
+                 tDate.getDate() === d.getDate();
+        });
+
+        // Day cell container
+        const cell = document.createElement('div');
+        cell.className = `min-h-[110px] p-2 flex flex-col justify-between transition-colors ${
+          isCurrentMonth ? 'bg-[#090d16] hover:bg-slate-900/60' : 'bg-[#070a12]/50 text-slate-600'
+        }`;
+
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'flex items-center justify-between mb-1.5';
+        
+        const dateNum = document.createElement('span');
+        dateNum.className = `text-xs font-mono font-bold flex items-center justify-center size-6 rounded-full ${
+          isToday 
+            ? 'bg-amber-500 text-black shadow-md shadow-amber-500/30' 
+            : isCurrentMonth ? 'text-slate-300' : 'text-slate-600'
+        }`;
+        dateNum.textContent = d.getDate();
+        headerDiv.appendChild(dateNum);
+
+        if (dayDeals.length > 0) {
+          const countBadge = document.createElement('span');
+          countBadge.className = 'text-[10px] font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.2 rounded border border-slate-700/60';
+          countBadge.textContent = `${dayDeals.length} deal${dayDeals.length > 1 ? 's' : ''}`;
+          headerDiv.appendChild(countBadge);
+        }
+
+        cell.appendChild(headerDiv);
+
+        const eventsContainer = document.createElement('div');
+        eventsContainer.className = 'flex-1 flex flex-col gap-1 overflow-hidden';
+
+        dayDeals.forEach(deal => {
+          const evBtn = document.createElement('button');
+          evBtn.onclick = () => showDealDetails(deal);
+          
+          let pnlBadge = '';
+          if (deal.pnl > 0) {
+            pnlBadge = `<span class="text-emerald-400 font-bold ml-auto font-mono">+$${deal.pnl.toFixed(2)}</span>`;
+          } else if (deal.pnl < 0) {
+            pnlBadge = `<span class="text-rose-400 font-bold ml-auto font-mono">-$${Math.abs(deal.pnl).toFixed(2)}</span>`;
+          } else {
+            pnlBadge = `<span class="text-slate-400 font-mono ml-auto">$0.00</span>`;
+          }
+
+          const isBuy = (deal.direction || '').toUpperCase() === 'BUY';
+          const dirColor = isBuy ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-rose-500/30 bg-rose-500/5 text-rose-300';
+
+          evBtn.className = `w-full text-left p-1.5 rounded border text-[11px] leading-tight transition flex items-center gap-1.5 hover:border-amber-500/60 hover:bg-slate-800 ${dirColor}`;
+          evBtn.innerHTML = `
+            <span class="w-1.5 h-1.5 rounded-full ${isBuy ? 'bg-emerald-400' : 'bg-rose-400'} flex-shrink-0"></span>
+            <span class="truncate font-semibold text-slate-200">#${deal.ticket || 'Note'} ${deal.direction || ''}</span>
+            ${pnlBadge}
+          `;
+          eventsContainer.appendChild(evBtn);
+        });
+
+        cell.appendChild(eventsContainer);
+        grid.appendChild(cell);
+
+        iter.setDate(iter.getDate() + 1);
+      }
+    }
+
+    function showDealDetails(deal) {
+      document.getElementById('modalTitle').textContent = deal.name || `Deal #${deal.ticket}`;
+      document.getElementById('modalAsset').textContent = `${deal.asset || 'XAUUSD'} ${deal.direction || ''}`;
+      
+      const pnlEl = document.getElementById('modalPnl');
+      if (deal.pnl > 0) {
+        pnlEl.textContent = `+$${deal.pnl.toFixed(2)}`;
+        pnlEl.className = 'font-bold text-emerald-400 text-sm';
+      } else if (deal.pnl < 0) {
+        pnlEl.textContent = `-$${Math.abs(deal.pnl).toFixed(2)}`;
+        pnlEl.className = 'font-bold text-rose-400 text-sm';
+      } else {
+        pnlEl.textContent = '$0.00';
+        pnlEl.className = 'font-bold text-slate-300 text-sm';
+      }
+
+      document.getElementById('modalVolume').textContent = `${deal.volume || 1.0} Lots`;
+      document.getElementById('modalTicket').textContent = `#${deal.ticket || 'Manual Note'}`;
+      document.getElementById('modalPrice').textContent = deal.price ? deal.price.toFixed(2) : 'N/A';
+      document.getElementById('modalTime').textContent = deal.datetime ? deal.datetime.replace('T', ' ') : 'N/A';
+      document.getElementById('modalComment').textContent = deal.comment || 'MetaTrader 5 Deal';
+      document.getElementById('modalNotes').textContent = deal.notes || 'Realized deal execution.';
+
+      document.getElementById('tradeModal').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('tradeModal').classList.add('hidden'); }
+    function openNewTradeModal() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById('entryDatetime').value = now.toISOString().slice(0, 16);
+      document.getElementById('newTradeModal').classList.remove('hidden');
+    }
+    function closeNewTradeModal() { document.getElementById('newTradeModal').classList.add('hidden'); }
+
+    function saveTradeEntry(e) {
+      e.preventDefault();
+      const dt = document.getElementById('entryDatetime').value;
+      const formation = document.getElementById('entryFormation').value;
+      const pnl = parseFloat(document.getElementById('entryPnl').value) || 0.0;
+      const notes = document.getElementById('entryNotes').value;
+
+      const newEntry = {
+        id: Date.now(),
+        ticket: "NOTE",
+        name: `${formation} [${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}]`,
+        datetime: dt,
+        asset: "XAUUSD",
+        direction: pnl >= 0 ? "PROFIT" : "LOSS",
+        volume: 1.0,
+        price: 0.0,
+        pnl: pnl,
+        comment: "Operator Manual Audit Note",
+        notes: notes
+      };
+
+      const notesList = getManualNotes(currentSelectedAccountId);
+      notesList.push(newEntry);
+      saveManualNotes(currentSelectedAccountId, notesList);
+
+      closeNewTradeModal();
+      document.getElementById('newTradeForm').reset();
+      fetchSingleAccountDeals(currentSelectedAccountId);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      enforceAuth();
+      loadJournalAccounts();
+    });
+  </script>
+</body>
+</html>

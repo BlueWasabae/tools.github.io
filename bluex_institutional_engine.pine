@@ -1,0 +1,193 @@
+//@version=5
+indicator("BlueX Institutional Execution Engine [XAU/USD]", overlay=true, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
+
+// ==============================================================================
+// 1. INPUT CONFIGURATION & USER PARAMETERS
+// ==============================================================================
+string G_SYS       = "System & Authentication"
+string i_authKey   = input.string("BLUEX_QUANT_SECURE_TOKEN_9981", "Webhook Secret Key", group=G_SYS)
+string i_symbol    = input.string("XAUUSD", "Execution Symbol", group=G_SYS)
+float  i_riskPct   = input.float(1.0, "Risk Per Trade (%)", minval=0.1, maxval=5.0, step=0.1, group=G_SYS)
+int    i_magic     = input.int(880101, "Execution Magic Number", group=G_SYS)
+
+string G_STRUCT    = "Institutional Market Structure"
+int    i_swingLen  = input.int(5, "Swing Detection Length", minval=2, maxval=50, group=G_STRUCT)
+float  i_dispMult  = input.float(1.8, "Displacement Multiplier (ATR)", minval=1.0, maxval=5.0, step=0.1, group=G_STRUCT)
+float  i_minRR     = input.float(3.0, "Minimum Target Risk:Reward", minval=2.0, maxval=10.0, step=0.5, group=G_STRUCT)
+float  i_spreadBuf = input.float(0.40, "Dynamic Spread Buffer (USD)", minval=0.10, maxval=3.0, step=0.05, group=G_STRUCT)
+
+// Visual Palette (Institutional Dark Mode)
+color C_DEMAND     = color.new(#00E676, 85)
+color C_DEMAND_BOR = color.new(#00E676, 20)
+color C_SUPPLY     = color.new(#FF1744, 85)
+color C_SUPPLY_BOR = color.new(#FF1744, 20)
+color C_SWEEP      = color.new(#FFD700, 0)
+color C_BOS        = color.new(#00B0FF, 0)
+color C_CHOCH      = color.new(#D500F9, 0)
+
+// ==============================================================================
+// 2. MATHEMATICAL BASELINE CALCULATIONS
+// ==============================================================================
+float atrValue     = ta.atr(14)
+float candleRange  = high - low
+float candleBody   = math.abs(close - open)
+bool  isDisplaced  = candleBody >= (atrValue * i_dispMult)
+
+// Swing High / Low Identification
+float swingHighRaw = ta.pivothigh(high, i_swingLen, i_swingLen)
+float swingLowRaw  = ta.pivotlow(low, i_swingLen, i_swingLen)
+
+var float lastSwingHigh = na
+var float lastSwingLow  = na
+var int   lastHighBar   = na
+var int   lastLowBar    = na
+
+if not na(swingHighRaw)
+    lastSwingHigh := swingHighRaw
+    lastHighBar   := bar_index - i_swingLen
+
+if not na(swingLowRaw)
+    lastSwingLow  := swingLowRaw
+    lastLowBar    := bar_index - i_swingLen
+
+// ==============================================================================
+// 3. MECHANICAL MARKET STRUCTURE MAPPING (BOS & CHOCH)
+// ==============================================================================
+var int  marketTrend   = 0     // 1 = Bullish, -1 = Bearish
+var bool bosBull       = false
+var bool bosBear       = false
+var bool chochBull     = false
+var bool chochBear     = false
+
+bosBull   := false
+bosBear   := false
+chochBull := false
+chochBear := false
+
+// Break of Structure (BOS) - Strict Full Candle Body Close past Swing Level
+if not na(lastSwingHigh) and ta.crossover(close, lastSwingHigh)
+    if marketTrend == 1
+        bosBull := true
+        line.new(lastHighBar, lastSwingHigh, bar_index, lastSwingHigh, color=C_BOS, width=1, style=line.style_dashed)
+        label.new(bar_index, lastSwingHigh, "BOS", color=color.new(C_BOS, 100), textcolor=C_BOS, size=size.small, style=label.style_none)
+    else if marketTrend == -1
+        chochBull   := true
+        marketTrend := 1
+        line.new(lastHighBar, lastSwingHigh, bar_index, lastSwingHigh, color=C_CHOCH, width=2, style=line.style_solid)
+        label.new(bar_index, lastSwingHigh, "CHoCH", color=color.new(C_CHOCH, 100), textcolor=C_CHOCH, size=size.small, style=label.style_none)
+    lastSwingHigh := na
+
+if not na(lastSwingLow) and ta.crossunder(close, lastSwingLow)
+    if marketTrend == -1
+        bosBear := true
+        line.new(lastLowBar, lastSwingLow, bar_index, lastSwingLow, color=C_BOS, width=1, style=line.style_dashed)
+        label.new(bar_index, lastSwingLow, "BOS", color=color.new(C_BOS, 100), textcolor=C_BOS, size=size.small, style=label.style_none)
+    else if marketTrend == 1
+        chochBear   := true
+        marketTrend := -1
+        line.new(lastLowBar, lastSwingLow, bar_index, lastSwingLow, color=C_CHOCH, width=2, style=line.style_solid)
+        label.new(bar_index, lastSwingLow, "CHoCH", color=color.new(C_CHOCH, 100), textcolor=C_CHOCH, size=size.small, style=label.style_none)
+    lastSwingLow := na
+
+// ==============================================================================
+// 4. LIQUIDITY SWEEP DETECTION (BSL / SSL)
+// ==============================================================================
+// Buy-Side Liquidity (BSL) Sweep: Wick penetrates high, but body closes back inside
+bool bslSweep = not na(lastSwingHigh) and (high > lastSwingHigh) and (close < lastSwingHigh)
+// Sell-Side Liquidity (SSL) Sweep: Wick penetrates low, but body closes back inside
+bool sslSweep = not na(lastSwingLow) and (low < lastSwingLow) and (close > lastSwingLow)
+
+if bslSweep
+    line.new(lastHighBar, lastSwingHigh, bar_index, lastSwingHigh, color=C_SWEEP, width=1)
+    label.new(bar_index, high, "BSL SWEEP", color=color.new(C_SWEEP, 100), textcolor=C_SWEEP, size=size.tiny)
+
+if sslSweep
+    line.new(lastLowBar, lastSwingLow, bar_index, lastSwingLow, color=C_SWEEP, width=1)
+    label.new(bar_index, low, "SSL SWEEP", color=color.new(C_SWEEP, 100), textcolor=C_SWEEP, size=size.tiny)
+
+// ==============================================================================
+// 5. SUPPLY & DEMAND ZONE ENGINEERING (DBR / RBD)
+// ==============================================================================
+var box activeDemandBox = na
+var box activeSupplyBox = na
+var float demandTop     = na
+var float demandBottom  = na
+var float supplyTop     = na
+var float supplyBottom  = na
+
+// Drop-Base-Rally (DBR) Demand Creation: Strong bullish displacement originating from a base
+bool isDBR = (close > open) and isDisplaced and (close[1] <= open[1])
+
+// Rally-Base-Drop (RBD) Supply Creation: Strong bearish displacement originating from a base
+bool isRBD = (close < open) and isDisplaced and (close[1] >= open[1])
+
+if isDBR
+    demandTop    := high[1]
+    demandBottom := low[1]
+    if not na(activeDemandBox)
+        box.delete(activeDemandBox)
+    activeDemandBox := box.new(left=bar_index - 1, top=demandTop, right=bar_index + 20, bottom=demandBottom, bgcolor=C_DEMAND, border_color=C_DEMAND_BOR, border_width=1)
+
+if isRBD
+    supplyTop    := high[1]
+    supplyBottom := low[1]
+    if not na(activeSupplyBox)
+        box.delete(activeSupplyBox)
+    activeSupplyBox := box.new(left=bar_index - 1, top=supplyTop, right=bar_index + 20, bottom=supplyBottom, bgcolor=C_SUPPLY, border_color=C_SUPPLY_BOR, border_width=1)
+
+// ==============================================================================
+// 6. EXECUTION TRIGGERS & PARAMETERIZED ALERT GENERATION
+// ==============================================================================
+var float orderEntry = na
+var float orderSL    = na
+var float orderTP1   = na
+var float orderTP2   = na
+
+bool validBuyLimitSetup  = false
+bool validSellLimitSetup = false
+bool setupInvalidated    = false
+
+// Long Trigger: Confirmed SSL Sweep OR DBR formation in an aligned market structure
+if barstate.isconfirmed and not na(demandTop) and (sslSweep or chochBull or (isDBR and marketTrend == 1))
+    validBuyLimitSetup := true
+    orderEntry         := demandTop + i_spreadBuf
+    orderSL            := demandBottom - i_spreadBuf
+    float riskDelta    = orderEntry - orderSL
+    orderTP1           := orderEntry + (riskDelta * i_minRR)
+    orderTP2           := orderEntry + (riskDelta * (i_minRR + 2.0))
+
+// Short Trigger: Confirmed BSL Sweep OR RBD formation in an aligned market structure
+if barstate.isconfirmed and not na(supplyBottom) and (bslSweep or chochBear or (isRBD and marketTrend == -1))
+    validSellLimitSetup := true
+    orderEntry          := supplyBottom - i_spreadBuf
+    orderSL             := supplyTop + i_spreadBuf
+    float riskDelta     = orderSL - orderEntry
+    orderTP1            := orderEntry - (riskDelta * i_minRR)
+    orderTP2            := orderEntry - (riskDelta * (i_minRR + 2.0))
+
+// Invalidation: Price pierces structural zone completely prior to limit fill
+if not na(demandBottom) and (close < demandBottom)
+    setupInvalidated := true
+    demandTop        := na
+    demandBottom     := na
+
+if not na(supplyTop) and (close > supplyTop)
+    setupInvalidated := true
+    supplyTop        := na
+    supplyBottom     := na
+
+// ==============================================================================
+// 7. INSTITUTIONAL WEBHOOK DISPATCH (JSON SERIALIZATION)
+// ==============================================================================
+if barstate.isconfirmed
+    if validBuyLimitSetup
+        string payloadBuy = '{"secret":"' + i_authKey + '","symbol":"' + i_symbol + '","action":"BUY_LIMIT","entry":' + str.tostring(orderEntry, "#.##") + ',"sl":' + str.tostring(orderSL, "#.##") + ',"tp1":' + str.tostring(orderTP1, "#.##") + ',"tp2":' + str.tostring(orderTP2, "#.##") + ',"risk_pct":' + str.tostring(i_riskPct, "#.#") + ',"magic":' + str.tostring(i_magic) + ',"comment":"BlueX DBR Demand Limit"}'
+        alert(payloadBuy, alert.freq_once_per_bar_close)
+
+    if validSellLimitSetup
+        string payloadSell = '{"secret":"' + i_authKey + '","symbol":"' + i_symbol + '","action":"SELL_LIMIT","entry":' + str.tostring(orderEntry, "#.##") + ',"sl":' + str.tostring(orderSL, "#.##") + ',"tp1":' + str.tostring(orderTP1, "#.##") + ',"tp2":' + str.tostring(orderTP2, "#.##") + ',"risk_pct":' + str.tostring(i_riskPct, "#.#") + ',"magic":' + str.tostring(i_magic) + ',"comment":"BlueX RBD Supply Limit"}'
+        alert(payloadSell, alert.freq_once_per_bar_close)
+
+    if setupInvalidated
+        string payloadCancel = '{"secret":"' + i_authKey + '","symbol":"' + i_symbol + '","action":"CANCEL","sl":0,"tp1":0,"magic":' + str.tostring(i_magic) + ',"comment":"BlueX Zone Invalidation"}'
+        alert(payloadCancel, alert.freq_once_per_bar_close)

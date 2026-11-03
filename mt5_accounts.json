@@ -1,0 +1,20 @@
+[
+  {
+    "id": "acc_default_1",
+    "name": "Primary Trading Account",
+    "login": 115076007,
+    "password": "",
+    "server": "MetaQuotes-Demo",
+    "path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+    "is_active": true
+  },
+  {
+    "id": "acc_1793737816",
+    "name": "FTMO Challenge ",
+    "login": 99887766,
+    "password": "",
+    "server": "FTMO-Server2",
+    "path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+    "is_active": false
+  }
+]
