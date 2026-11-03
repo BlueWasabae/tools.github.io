@@ -1,0 +1,1341 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales & Execution • BlueX AdminCN Dashboard</title>
+  
+  <link rel="icon" type="image/png" href="/assets/images/bluex-3d-logo.png">
+  <meta name="theme-color" content="#060911">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Dynamic Bridge Routing (Local MT5 IPC or Cloud Web Cockpit)
+    const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? ''
+      : (localStorage.getItem('bluex_bridge_url') || 'http://127.0.0.1:8000');
+
+    function apiFetch(endpoint, options = {}) {
+      const url = endpoint.startsWith('http') ? endpoint : (API_BASE + endpoint);
+      return fetch(url, options);
+    }
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: '#060911',
+            card: '#0c101d',
+            'card-subtle': '#111728',
+            border: '#1a2235',
+            'border-subtle': '#141b2b',
+            muted: '#171e30',
+            'muted-foreground': '#8a99b5',
+            primary: '#ffb800',
+            accent: '#00ffe0',
+            success: '#00e676',
+            danger: '#ff1744'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #060911;
+      color: #f1f5f9;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .font-display {
+      font-family: 'Outfit', sans-serif;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #060911;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1a2235;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2a3754;
+    }
+
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#060911] text-slate-100 flex overflow-hidden antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- ========================================================================= -->
+  <!-- LEFT SIDEBAR (SHADCN ADMINCN SPECIFICATION) -->
+  <!-- ========================================================================= -->
+  <aside id="sidebar" class="w-64 bg-[#090d18] border-r border-slate-800/80 flex flex-col flex-shrink-0 z-30 transition-all duration-300 ease-in-out relative select-none">
+    
+    <!-- Sidebar Header -->
+    <div class="h-16 px-4 border-b border-slate-800/80 flex items-center justify-between">
+      <a href="/dashboard/sales" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-amber-400 to-amber-500 p-0.5 shadow-lg shadow-cyan-500/10 group-hover:scale-105 transition-transform flex items-center justify-center">
+          <div class="w-full h-full bg-[#090d16] rounded-[10px] flex items-center justify-center">
+            <span class="font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-amber-400 text-xs">BX</span>
+          </div>
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-1.5">
+            <span class="font-display font-bold text-sm tracking-tight text-white">BlueX AdminCN</span>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">Quantitative Desk</span>
+        </div>
+      </a>
+      
+      <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Navigation Menu Items -->
+    <div class="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      
+      <!-- Group: DASHBOARDS -->
+      <div>
+        <div class="px-3 mb-2 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
+          Dashboards
+        </div>
+        <nav class="space-y-1">
+          <a href="/dashboard/sales" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold shadow-sm transition">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            <span>Sales & Execution</span>
+            <span class="ml-auto px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/20 text-amber-300 font-bold">REAL</span>
+          </a>
+
+          <a href="/journal" target="_blank" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>Trading Journal</span>
+            <span class="ml-auto text-slate-500 text-[10px]">↗</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Group: EXECUTION OPERATIONS -->
+      <div>
+        <div class="px-3 mb-2 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
+          Execution Engine
+        </div>
+        <nav class="space-y-1">
+          <a href="#holding-positions-section" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span>Live Held Positions</span>
+            <span id="nav-open-badge" class="ml-auto px-1.5 py-0.2 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-400 font-bold">0</span>
+          </a>
+
+          <a href="#signals-queue-panel" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Signal Queue</span>
+            <span id="nav-pending-badge" class="ml-auto px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-800 text-slate-300">0</span>
+          </a>
+
+          <button onclick="openAccountModal()" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+            <span>MT5 Accounts</span>
+            <span class="ml-auto text-[10px] font-mono text-cyan-400">CONFIG</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Group: SYSTEM -->
+      <div>
+        <div class="px-3 mb-2 text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
+          System & Settings
+        </div>
+        <nav class="space-y-1">
+                    <a href="https://www.bluexacademy.site" target="_blank" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            <span>LS Trading Academy</span>
+            <span class="ml-auto text-amber-400 text-[10px] font-mono">SITE ↗</span>
+          </a>
+          <button onclick="openMT5Guide()" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            <span>MT5 Bridge Guide</span>
+          </button>
+        </nav>
+      </div>
+
+    </div>
+
+    <!-- Sidebar Footer / Operator Profile -->
+    <div class="p-3 border-t border-slate-800/80 bg-[#080b14]/80">
+      <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+        <div class="relative">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-amber-400 flex items-center justify-center font-bold text-black text-xs">
+            BW
+          </div>
+          <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#080b14] rounded-full"></span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-bold text-white truncate" id="sidebar-user-name">bluewasabae</div>
+          <div class="text-[10px] text-slate-400 truncate font-mono">Lead Operator</div>
+        </div>
+        <button onclick="handleSignOut()" title="Sign Out" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN APPLICATION VIEWPORT -->
+  <!-- ========================================================================= -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    
+    <!-- TOP NAVIGATION BAR -->
+    <header class="h-16 px-4 md:px-6 bg-[#090d18]/90 backdrop-blur border-b border-slate-800/80 flex items-center justify-between gap-4 z-20 flex-shrink-0">
+      
+      <!-- Left: Mobile Toggle & Breadcrumbs -->
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+
+        <div class="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400">
+          <span>Dashboard</span>
+          <span class="text-slate-600">/</span>
+          <span class="text-white font-semibold">Sales & Real Execution</span>
+        </div>
+      </div>
+
+      <!-- Center: Live Market Ticker -->
+      <div class="hidden md:flex items-center gap-4 bg-slate-900/80 border border-slate-800/90 rounded-full px-4 py-1.5 text-xs font-mono">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle" id="nav-pulse-dot"></span>
+          <span id="nav-terminal-conn" class="text-slate-300 font-bold">CONNECTING...</span>
+        </div>
+        <div class="h-3 w-px bg-slate-800"></div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-500">XAU/USD:</span>
+          <span class="text-amber-400 font-bold" id="nav-tick-bid">0.00</span>
+          <span class="text-slate-600">/</span>
+          <span class="text-amber-400 font-bold" id="nav-tick-ask">0.00</span>
+        </div>
+        <div class="h-3 w-px bg-slate-800"></div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-500">SPREAD:</span>
+          <span class="text-cyan-400 font-bold" id="nav-tick-spread">0.0 pts</span>
+        </div>
+      </div>
+
+      <!-- Right: Controls & Profile -->
+      <div class="flex items-center gap-3">
+        
+        <!-- Multi-Account MT5 Dropdown -->
+        <div class="hidden sm:flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1">
+          <span class="text-[10px] font-mono text-slate-500">ACC:</span>
+          <select id="header-account-select" onchange="handleAccountSwitch(this.value)" class="bg-transparent text-xs font-mono text-cyan-400 font-bold outline-none cursor-pointer">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+
+        <!-- Journal Button -->
+        <a href="/journal" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span class="hidden sm:inline">Journal</span>
+        </a>
+
+        <!-- User Menu Dropdown Button -->
+        <div class="flex items-center gap-2 pl-2 border-l border-slate-800">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-amber-400 flex items-center justify-center font-bold text-black text-xs shadow-sm">
+            BW
+          </div>
+          <div class="hidden xl:flex flex-col text-left">
+            <span class="text-xs font-bold text-white leading-tight">bluewasabae</span>
+            <span class="text-[10px] text-emerald-400 font-mono">Live Session</span>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ======================================================================= -->
+    <!-- SCROLLABLE DASHBOARD CONTENT AREA -->
+    <!-- ======================================================================= -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+      
+      <!-- DASHBOARD PAGE HEADER -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2">
+            <span>Sales & Quantitative Execution</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              100% REAL MT5 DATA
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400 font-mono mt-0.5">
+            Direct IPC connection to MetaTrader 5 • Real-time balance, actual deal history, and live position control.
+          </p>
+        </div>
+
+        <!-- Action Toolbar with Auto-BE Toggle Button -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- AUTO-BE TOGGLE BUTTON (+2RR) -->
+          <button 
+            id="btn-auto-be-toggle" 
+            onclick="toggleAutoBE()" 
+            class="px-3.5 py-1.5 rounded-lg border text-xs font-mono font-bold transition flex items-center gap-2 shadow-sm"
+          >
+            <span class="w-2 h-2 rounded-full" id="auto-be-dot"></span>
+            <span id="auto-be-text">AUTO BE @ +2RR: OFF</span>
+          </button>
+
+          <button onclick="generateSimulatedSignal()" class="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>Test Signal</span>
+          </button>
+
+          <button onclick="executeMoveBEAll()" class="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <span>🛡️ BE Move All</span>
+          </button>
+
+          <button onclick="executeEmergencyCloseAll()" class="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <span>🚨 Close All</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- 4 TOP METRIC CARDS (REAL MT5 DATA) -->
+      <!-- ===================================================================== -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Metric Card 1: Real Realized PnL from MT5 -->
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase font-mono">Realized PnL (Closed)</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+          </div>
+          <div class="text-2xl font-black font-mono tracking-tight" id="kpi-net-pnl">
+            $0.00
+          </div>
+          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-slate-400">
+            <span>Actual Closed Deals:</span>
+            <b class="text-white" id="kpi-closed-count">0</b>
+          </div>
+        </div>
+
+        <!-- Metric Card 2: Real MT5 Deal Volume -->
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase font-mono">Real Turnover Volume</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+          </div>
+          <div class="text-2xl font-black font-mono text-white tracking-tight" id="kpi-volume">
+            0.00 Lots
+          </div>
+          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-slate-400">
+            <span>Current Balance:</span>
+            <b class="text-cyan-400" id="kpi-balance-val">$100,000.93</b>
+          </div>
+        </div>
+
+        <!-- Metric Card 3: Real Active Positions & Equity -->
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase font-mono">Active MT5 Bridge</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+          </div>
+          <div class="text-2xl font-black font-mono text-amber-400 tracking-tight" id="kpi-orders-count">
+            0 Open / 0 Pending
+          </div>
+          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-slate-400">
+            <span>Account Equity:</span>
+            <b class="text-white" id="kpi-equity-val">$100,000.93</b>
+          </div>
+        </div>
+
+        <!-- Metric Card 4: Real Win Rate & Profit Factor -->
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-medium uppercase font-mono">Real Win Rate</span>
+            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+          </div>
+          <div class="text-2xl font-black font-mono text-purple-400 tracking-tight" id="kpi-win-rate">
+            0.0%
+          </div>
+          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-slate-400">
+            <span>Profit Factor:</span>
+            <b class="text-white" id="kpi-profit-factor">0.00</b>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- DEDICATED LIVE HELD POSITIONS ADJUSTMENT PANEL (WEBSITE & PANEL) -->
+      <!-- ===================================================================== -->
+      <div id="holding-positions-section" class="bg-[#0c101d] border-2 border-cyan-500/30 rounded-xl p-5 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <h2 class="text-base font-bold text-white tracking-tight">Live Active Holding Positions Panel</h2>
+              <span id="holding-positions-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-bold">
+                0 HOLDING
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 font-mono mt-0.5">
+              Live bi-directional control: adjust Stop Loss, Take Profit, and partial lot closures directly on active MT5 tickets.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-mono text-slate-400">Total Floating PnL:</span>
+            <span id="holding-total-pnl" class="text-base font-black font-mono text-white">$0.00</span>
+          </div>
+        </div>
+
+        <!-- Dynamic Held Positions Container -->
+        <div id="holding-positions-list" class="mt-4 space-y-4">
+          <div class="text-center py-10 text-slate-500 text-xs font-mono bg-[#080b14] rounded-lg border border-slate-800/80">
+            No positions currently held by active account. New market orders or limit fills will appear here instantly with full live adjustment controls.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- MAIN SPLIT WORKSPACE: SIGNAL QUEUE, RECENT SALES & RISK CONTROLS -->
+      <!-- ===================================================================== -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT COLUMN (7 COLS): SIGNAL APPROVAL QUEUE -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Signal Approval Queue (Positions Approve) -->
+          <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl" id="signals-queue-panel">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-4">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                <h3 class="text-base font-bold text-white">Signal Approval Queue</h3>
+                <span id="badge-pending-count" class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
+                  0 PENDING
+                </span>
+              </div>
+              <button onclick="generateSimulatedSignal()" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 transition">
+                + Simulate S&D Setup
+              </button>
+            </div>
+
+            <!-- Signal Cards Container -->
+            <div id="queue-signals-list" class="space-y-3">
+              <div class="text-center py-10 text-slate-500 text-xs font-mono">
+                No pending setups in queue. Awaiting institutional displacement sweeps or click <b>[+ Test Signal]</b>.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN (5 COLS): RECENT SALES & RISK CONTROLS -->
+        <div class="lg:col-span-5 space-y-6">
+          
+          <!-- Recent Executed Sales / Real MT5 Closed Deals -->
+          <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-bold text-white">Recent Real Closed Deals</h3>
+                <p class="text-xs text-slate-400 font-mono mt-0.5">Real-time trade receipts pulled from MT5 history.</p>
+              </div>
+              <a href="/journal" class="text-xs font-mono text-amber-400 hover:underline">View Journal ↗</a>
+            </div>
+
+            <div id="recent-deals-list" class="space-y-3 font-mono text-xs">
+              <div class="text-center py-6 text-slate-500 text-xs">
+                No historical closed trades recorded yet on this account.
+              </div>
+            </div>
+          </div>
+
+          <!-- Institutional Risk Controls & Parameters -->
+          <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl space-y-4">
+            <h3 class="text-sm font-bold text-white uppercase font-mono tracking-wider text-slate-300">
+              ⚡ Cockpit Risk & Execution Controls
+            </h3>
+
+            <!-- Granular Risk Adjuster -->
+            <div>
+              <div class="flex items-center justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">Risk Allocation (%)</span>
+                <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold" id="risk-badge-text">
+                  0.50%
+                </span>
+              </div>
+              <div class="flex items-center gap-3">
+                <input 
+                  type="range" 
+                  id="risk-range-input" 
+                  min="0.10" 
+                  max="3.00" 
+                  step="0.05" 
+                  value="0.50" 
+                  oninput="handleRiskSliderChange(this.value)" 
+                  class="flex-1 accent-amber-500 cursor-pointer"
+                />
+                <input 
+                  type="number" 
+                  id="risk-number-input" 
+                  min="0.10" 
+                  max="5.00" 
+                  step="0.05" 
+                  value="0.50" 
+                  onchange="handleRiskNumberChange(this.value)" 
+                  class="w-16 bg-[#080b14] border border-slate-700 rounded px-2 py-1 text-center font-mono text-xs text-white"
+                />
+              </div>
+
+              <!-- Quick Presets -->
+              <div class="grid grid-cols-4 gap-2 mt-2">
+                <button onclick="setRiskPct(0.50)" id="risk-preset-05" class="py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition">0.5% (Safe)</button>
+                <button onclick="setRiskPct(1.00)" id="risk-preset-10" class="py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">1.0%</button>
+                <button onclick="setRiskPct(1.50)" id="risk-preset-15" class="py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">1.5% (Agg)</button>
+                <button onclick="setRiskPct(2.00)" id="risk-preset-20" class="py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">2.0%</button>
+              </div>
+            </div>
+
+            <!-- Execution Pipeline Option -->
+            <div>
+              <span class="block text-xs font-mono text-slate-400 mb-1">Execution Pipeline</span>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="setExecutionMode('AUTO')" id="btn-auto-exec" class="py-2 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition">
+                  🤖 AUTO-EXECUTE
+                </button>
+                <button onclick="setExecutionMode('MANUAL')" id="btn-manual-exec" class="py-2 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition">
+                  👤 POSITIONS APPROVE
+                </button>
+              </div>
+            </div>
+
+            <!-- Target Risk:Reward Slider -->
+            <div>
+              <div class="flex items-center justify-between text-xs font-mono mb-1">
+                <span class="text-slate-400">Target Risk:Reward</span>
+                <span class="font-bold text-amber-400 font-mono" id="rr-badge-text">1:3.0</span>
+              </div>
+              <input 
+                type="range" 
+                id="rr-range-input" 
+                min="1.5" 
+                max="8.0" 
+                step="0.5" 
+                value="3.0" 
+                oninput="handleRRChange(this.value)" 
+                class="w-full accent-amber-500 cursor-pointer"
+              />
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MT5 MULTI-ACCOUNT MANAGEMENT MODAL -->
+  <!-- ========================================================================= -->
+  <div id="account-manager-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span class="text-cyan-400">⚙️</span> MT5 Multi-Account Configuration
+        </h3>
+        <button onclick="closeAccountModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div id="accounts-list-container" class="space-y-2 max-h-56 overflow-y-auto font-mono text-xs"></div>
+
+      <div class="border-t border-slate-800 pt-4">
+        <h4 class="text-xs font-bold text-amber-400 mb-3 uppercase font-mono">+ Connect New MT5 Account</h4>
+        <form onsubmit="handleAddAccountSubmit(event)" class="space-y-3 text-xs font-mono">
+          <div>
+            <label class="block text-slate-400 mb-1 text-[10px]">ACCOUNT LABEL</label>
+            <input type="text" id="new-acc-name" placeholder="e.g. Prop Firm $100K" required class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1 text-[10px]">LOGIN NUMBER</label>
+              <input type="number" id="new-acc-login" placeholder="115076007" required class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1 text-[10px]">PASSWORD (OPTIONAL)</label>
+              <input type="password" id="new-acc-password" placeholder="Leave blank if saved" class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+            </div>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1 text-[10px]">BROKER SERVER</label>
+            <input type="text" id="new-acc-server" placeholder="MetaQuotes-Demo" required class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1 text-[10px]">TERMINAL64.EXE PATH</label>
+            <input type="text" id="new-acc-path" value="C:\Program Files\MetaTrader 5\terminal64.exe" required class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+          </div>
+          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2 rounded text-xs transition">
+            + Save & Connect Terminal
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MT5 Terminal Connection Guide Modal -->
+  <div id="mt5-guide-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-amber-400 flex items-center gap-2">
+          ⚡ Connect MT5 Terminal to Cockpit
+        </h3>
+        <button onclick="closeMT5Guide()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+        <p><b>1. Enable Algorithmic Trading:</b> In MT5 -> Tools -> Options (<code>Ctrl+O</code>) -> Expert Advisors -> Check <i>Allow algorithmic trading</i> & <i>Allow DLL imports</i>.</p>
+        <p><b>2. Allow WebRequest:</b> Add <code>http://127.0.0.1:8000</code> to the WebRequest URL list.</p>
+        <p><b>3. Launch Bridge:</b> Run <code>run_bridge.bat</code> in <code>d:\My Website\tools\execution-bridge\</code>.</p>
+        <p><b>4. Live Link:</b> Top indicator lights green with active account `#115076007` and Gold tick stream.</p>
+      </div>
+      <button onclick="closeMT5Guide()" class="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition">
+        Got It
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-[#0f172a] border border-cyan-400/40 text-white px-4 py-2.5 rounded-lg shadow-xl font-mono text-xs hidden"></div>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT ENGINE & REAL DATA PIPELINE -->
+  <!-- ========================================================================= -->
+  <script>
+    // Dynamic Bridge Routing (Local MT5 IPC or Cloud Web Cockpit)
+    const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? ''
+      : (localStorage.getItem('bluex_bridge_url') || 'http://127.0.0.1:8000');
+
+    function apiFetch(endpoint, options = {}) {
+      const url = endpoint.startsWith('http') ? endpoint : (API_BASE + endpoint);
+      return fetch(url, options);
+    }
+    // 1. Authentication Guard
+    async function enforceAuth() {
+      const token = localStorage.getItem('bx_auth_token');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+      try {
+        const res = await apiFetch('/api/auth/verify', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          localStorage.removeItem('bx_auth_token');
+          window.location.href = '/login';
+        }
+      } catch (err) {}
+    }
+
+    async function handleSignOut() {
+      try {
+        const token = localStorage.getItem('bx_auth_token');
+        await apiFetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + (token || '') }
+        });
+      } catch (e) {}
+      localStorage.removeItem('bx_auth_token');
+      window.location.href = '/login';
+    }
+
+    // 2. State & Settings
+    let currentSettings = {
+      risk_mode: 'SAFE',
+      custom_risk_pct: 0.50,
+      execution_mode: 'MANUAL',
+      target_rr: 3.0,
+      spread_buffer_usd: 0.40,
+      auto_be_enabled: false
+    };
+
+    let latestAccountState = { equity: 100000.0, balance: 100000.0 };
+    let registeredAccounts = [];
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2800);
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      sb.classList.toggle('-translate-x-full');
+      sb.classList.toggle('absolute');
+    }
+
+    function openAccountModal() {
+      document.getElementById('account-manager-modal').classList.remove('hidden');
+      loadAccountsList();
+    }
+    function closeAccountModal() {
+      document.getElementById('account-manager-modal').classList.add('hidden');
+    }
+
+    function openMT5Guide() { document.getElementById('mt5-guide-modal').classList.remove('hidden'); }
+    function closeMT5Guide() { document.getElementById('mt5-guide-modal').classList.add('hidden'); }
+
+    // Toggle Auto BE @ +2RR
+    async function toggleAutoBE() {
+      try {
+        const res = await apiFetch('/api/actions/auto-be-toggle', { method: 'POST' });
+        const d = await res.json();
+        currentSettings.auto_be_enabled = d.auto_be_enabled;
+        updateAutoBEUI(d.auto_be_enabled);
+        showToast(`Auto BE @ +2RR: ${d.auto_be_enabled ? 'ACTIVATED' : 'DISABLED'}`);
+      } catch (e) {
+        showToast("Error toggling Auto-BE.");
+      }
+    }
+
+    function updateAutoBEUI(enabled) {
+      const btn = document.getElementById('btn-auto-be-toggle');
+      const dot = document.getElementById('auto-be-dot');
+      const txt = document.getElementById('auto-be-text');
+      if (!btn) return;
+
+      if (enabled) {
+        btn.className = 'px-3.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 text-xs font-mono font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-500/10';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400 animate-pulse';
+        txt.textContent = 'AUTO BE @ +2RR: ON';
+      } else {
+        btn.className = 'px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 text-xs font-mono font-bold transition flex items-center gap-2 hover:border-slate-700';
+        dot.className = 'w-2 h-2 rounded-full bg-slate-600';
+        txt.textContent = 'AUTO BE @ +2RR: OFF';
+      }
+    }
+
+    // Risk percentage handling
+    function handleRiskSliderChange(val) {
+      setRiskPct(parseFloat(val));
+    }
+
+    function handleRiskNumberChange(val) {
+      let num = parseFloat(val);
+      if (isNaN(num) || num < 0.05) num = 0.50;
+      if (num > 10.0) num = 10.0;
+      setRiskPct(num);
+    }
+
+    function setRiskPct(pct) {
+      const formatted = parseFloat(pct).toFixed(2);
+      currentSettings.custom_risk_pct = parseFloat(formatted);
+      currentSettings.risk_mode = (formatted === '0.50') ? 'SAFE' : (formatted === '1.50') ? 'AGGRESSIVE' : 'CUSTOM';
+
+      document.getElementById('risk-range-input').value = currentSettings.custom_risk_pct;
+      document.getElementById('risk-number-input').value = currentSettings.custom_risk_pct;
+      document.getElementById('risk-badge-text').textContent = `${formatted}%`;
+
+      ['05', '10', '15', '20'].forEach(p => {
+        const el = document.getElementById(`risk-preset-${p}`);
+        if (el) el.className = 'py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition';
+      });
+      if (formatted === '0.50') document.getElementById('risk-preset-05').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+      else if (formatted === '1.00') document.getElementById('risk-preset-10').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+      else if (formatted === '1.50') document.getElementById('risk-preset-15').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+      else if (formatted === '2.00') document.getElementById('risk-preset-20').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+
+      syncSettings();
+      showToast(`Risk Allocation: ${formatted}%`);
+      refreshState();
+    }
+
+    function handleRRChange(val) {
+      const num = parseFloat(val);
+      document.getElementById('rr-badge-text').textContent = `1:${num.toFixed(1)}`;
+      currentSettings.target_rr = num;
+      syncSettings();
+      refreshState();
+    }
+
+    function setExecutionMode(mode) {
+      currentSettings.execution_mode = mode;
+      document.getElementById('btn-auto-exec').className = mode === 'AUTO' 
+        ? 'py-2 px-3 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition'
+        : 'py-2 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
+      document.getElementById('btn-manual-exec').className = mode === 'MANUAL'
+        ? 'py-2 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition'
+        : 'py-2 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
+      syncSettings();
+      showToast(`Execution: ${mode}`);
+    }
+
+    async function syncSettings() {
+      try {
+        await apiFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentSettings)
+        });
+      } catch (e) {}
+    }
+
+    // Accounts
+    async function loadAccountsList() {
+      try {
+        const res = await apiFetch('/api/accounts');
+        const data = await res.json();
+        registeredAccounts = data.accounts || [];
+
+        const headerSelect = document.getElementById('header-account-select');
+        headerSelect.innerHTML = registeredAccounts.map(a => `
+          <option value="${a.id}" ${a.is_active ? 'selected' : ''}>
+            #${a.login} (${a.name})
+          </option>
+        `).join('');
+
+        const container = document.getElementById('accounts-list-container');
+        container.innerHTML = registeredAccounts.map(a => `
+          <div class="flex items-center justify-between p-2 rounded-lg bg-[#080b14] border ${a.is_active ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-800'}">
+            <div>
+              <div class="font-bold ${a.is_active ? 'text-cyan-400' : 'text-white'}">
+                ${a.name} ${a.is_active ? '<span class="text-emerald-400 text-[10px]">[ACTIVE]</span>' : ''}
+              </div>
+              <div class="text-[10px] text-slate-400">
+                Login: #${a.login} | Server: ${a.server}
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              ${!a.is_active ? `<button onclick="handleAccountSwitch('${a.id}')" class="px-2 py-1 rounded bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/30 text-[10px] font-bold">SWITCH</button>` : ''}
+              ${registeredAccounts.length > 1 ? `<button onclick="handleDeleteAccount('${a.id}')" class="px-2 py-1 rounded bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold">DEL</button>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function handleAccountSwitch(accId) {
+      if (!accId) return;
+      showToast("Connecting MT5 to selected account...");
+      try {
+        const res = await apiFetch(`/api/accounts/${accId}/switch`, { method: 'POST' });
+        const d = await res.json();
+        if (d.status === 'success') {
+          showToast(`Active MT5 Terminal: #${d.active_account.login}`);
+          loadAccountsList();
+          refreshState();
+        }
+      } catch (e) {
+        showToast("Failed to switch MT5 account.");
+      }
+    }
+
+    async function handleAddAccountSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-acc-name').value;
+      const login = parseInt(document.getElementById('new-acc-login').value);
+      const password = document.getElementById('new-acc-password').value;
+      const server = document.getElementById('new-acc-server').value;
+      const path = document.getElementById('new-acc-path').value;
+
+      try {
+        const res = await apiFetch('/api/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, login, password, server, path })
+        });
+        const d = await res.json();
+        showToast(`Account #${login} registered!`);
+        closeAccountModal();
+        await loadAccountsList();
+        handleAccountSwitch(d.account.id);
+      } catch (err) {
+        showToast("Error adding account.");
+      }
+    }
+
+    async function handleDeleteAccount(accId) {
+      if (!confirm("Delete this MT5 account from terminal registry?")) return;
+      try {
+        await apiFetch(`/api/accounts/${accId}`, { method: 'DELETE' });
+        showToast("Account removed.");
+        loadAccountsList();
+      } catch (e) {}
+    }
+
+    // Tactical Actions
+    async function generateSimulatedSignal() {
+      try {
+        await apiFetch('/api/signals/simulate', { method: 'POST' });
+        showToast("Institutional S&D signal generated!");
+        refreshState();
+      } catch (e) {}
+    }
+
+    async function approveSignal(id) {
+      try {
+        await apiFetch(`/api/signals/${id}/approve`, { method: 'POST' });
+        showToast("✅ Limit Order Approved & Dispatched to MT5!");
+        refreshState();
+      } catch (e) {}
+    }
+
+    async function declineSignal(id) {
+      try {
+        await apiFetch(`/api/signals/${id}/reject`, { method: 'POST' });
+        showToast("❌ Signal Declined.");
+        refreshState();
+      } catch (e) {}
+    }
+
+    async function executeMoveBEAll() {
+      if (!confirm("Move all profitable positions to Breakeven (+ spread buffer)?")) return;
+      try {
+        const res = await apiFetch('/api/actions/be-all', { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || "BE command executed.");
+        refreshState();
+      } catch (e) {}
+    }
+
+    async function executeEmergencyCloseAll() {
+      if (!confirm("🚨 EMERGENCY KILL SWITCH: Close 100% of open market orders and delete all limit orders?")) return;
+      try {
+        const res = await apiFetch('/api/actions/close-all', { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || "Close All executed.");
+        refreshState();
+      } catch (e) {}
+    }
+
+    // Live Position Modification on website
+    async function handleModifyPosition(ticket) {
+      const slInput = document.getElementById(`pos-sl-${ticket}`);
+      const tpInput = document.getElementById(`pos-tp-${ticket}`);
+      if (!slInput || !tpInput) return;
+
+      const sl = parseFloat(slInput.value);
+      const tp = parseFloat(tpInput.value);
+
+      try {
+        const res = await apiFetch(`/api/positions/${ticket}/modify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sl, tp })
+        });
+        const d = await res.json();
+        showToast(d.message || `Position #${ticket} modified.`);
+        refreshState();
+      } catch (e) {
+        showToast("Failed to modify position.");
+      }
+    }
+
+    async function handlePartialClose(ticket) {
+      const volInput = document.getElementById(`pos-part-vol-${ticket}`);
+      if (!volInput) return;
+      const vol = parseFloat(volInput.value);
+      if (isNaN(vol) || vol <= 0) return;
+
+      try {
+        const res = await apiFetch(`/api/positions/${ticket}/close-partial`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ volume: vol })
+        });
+        const d = await res.json();
+        showToast(d.message || `Closed ${vol} lots on #${ticket}.`);
+        refreshState();
+      } catch (e) {
+        showToast("Partial close failed.");
+      }
+    }
+
+    async function handleMoveSingleBE(ticket) {
+      try {
+        const res = await apiFetch(`/api/positions/${ticket}/be`, { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || `Position #${ticket} moved to BE.`);
+        refreshState();
+      } catch (e) {
+        showToast("Error moving to BE.");
+      }
+    }
+
+    async function closeSinglePosition(ticket) {
+      if (!confirm(`Close position #${ticket}?`)) return;
+      try {
+        const res = await apiFetch(`/api/positions/${ticket}/close`, { method: 'POST' });
+        const d = await res.json();
+        showToast(d.message || `Position #${ticket} closed.`);
+        refreshState();
+      } catch (e) {
+        showToast("Failed to close position.");
+      }
+    }
+
+    function stepVal(id, delta) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      let val = parseFloat(el.value) || 0.0;
+      val = round(val + delta, 2);
+      el.value = val.toFixed(2);
+    }
+
+    function round(num, decimals) {
+      const factor = Math.pow(10, decimals);
+      return Math.round(num * factor) / factor;
+    }
+
+    // 3. Real-time Telemetry Loop
+    async function refreshState() {
+      try {
+        const res = await apiFetch('/api/state');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Sync settings
+        if (data.auto_be_enabled !== undefined) {
+          currentSettings.auto_be_enabled = data.auto_be_enabled;
+          updateAutoBEUI(data.auto_be_enabled);
+        }
+
+        // Ticker & MT5 Connection
+        const pulse = document.getElementById('nav-pulse-dot');
+        const connLabel = document.getElementById('nav-terminal-conn');
+
+        if (data.account && data.account.connected) {
+          latestAccountState = data.account;
+          pulse.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle';
+          connLabel.textContent = `MT5: #${data.account.login} (${data.account.broker})`;
+
+          // Real Account Balances
+          document.getElementById('kpi-balance-val').textContent = `$${data.account.balance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+          document.getElementById('kpi-equity-val').textContent = `$${data.account.equity.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        } else {
+          pulse.className = 'w-2 h-2 rounded-full bg-rose-500';
+          connLabel.textContent = 'MT5 OFFLINE';
+        }
+
+        if (data.tick && !data.tick.error) {
+          document.getElementById('nav-tick-bid').textContent = data.tick.bid.toFixed(2);
+          document.getElementById('nav-tick-ask').textContent = data.tick.ask.toFixed(2);
+          document.getElementById('nav-tick-spread').textContent = `${data.tick.spread_points} pts ($${data.tick.spread_usd.toFixed(2)})`;
+        }
+
+        // 100% REAL MT5 NUMBERS FOR KPI CARDS
+        if (data.real_stats) {
+          const pnlVal = data.real_stats.total_realized_pnl;
+          const pnlEl = document.getElementById('kpi-net-pnl');
+          pnlEl.textContent = `${pnlVal >= 0 ? '+' : ''}$${pnlVal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+          pnlEl.className = `text-2xl font-black font-mono tracking-tight ${pnlVal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+          document.getElementById('kpi-volume').textContent = `${data.real_stats.total_volume_lots.toFixed(2)} Lots`;
+          document.getElementById('kpi-closed-count').textContent = data.real_stats.closed_trades_count;
+          document.getElementById('kpi-win-rate').textContent = `${data.real_stats.win_rate_pct.toFixed(1)}%`;
+          document.getElementById('kpi-profit-factor').textContent = data.real_stats.profit_factor.toFixed(2);
+        }
+
+        // Real Active Orders Count
+        const openCount = (data.positions || []).length;
+        const pendingCount = (data.pending_signals || []).length;
+        document.getElementById('kpi-orders-count').textContent = `${openCount} Open / ${pendingCount} Pending`;
+        document.getElementById('nav-open-badge').textContent = openCount;
+        document.getElementById('nav-pending-badge').textContent = pendingCount;
+        document.getElementById('holding-positions-badge').textContent = `${openCount} HOLDING`;
+
+        // Render Dedicated Live Holding Positions Panel
+        renderHoldingPositions(data.positions || [], data.tick);
+
+        // Render Recent Closed Real Deals
+        renderRecentDeals(data.recent_deals || []);
+
+        // Render Signal Queue
+        renderSignalsQueue(data.pending_signals || []);
+
+      } catch (err) {}
+    }
+
+    // Dedicated Live Holding Positions Panel Rendering
+    function renderHoldingPositions(positions, tick) {
+      const container = document.getElementById('holding-positions-list');
+      const totalPnlEl = document.getElementById('holding-total-pnl');
+
+      let totalPnl = 0.0;
+      if (positions.length === 0) {
+        totalPnlEl.textContent = '$0.00';
+        totalPnlEl.className = 'text-base font-black font-mono text-slate-400';
+        container.innerHTML = `
+          <div class="text-center py-10 text-slate-500 text-xs font-mono bg-[#080b14] rounded-lg border border-slate-800/80">
+            No positions currently held by active account. Real-time floating PnL, live SL/TP adjustments, and partial closures appear here automatically upon fill.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = positions.map(p => {
+        totalPnl += p.profit;
+        const isBuy = p.type === 'BUY';
+        const isProf = p.profit >= 0;
+
+        // Calculate Realized Floating RR
+        let floatingRR = 0.0;
+        let isAt2RR = false;
+        if (p.sl > 0) {
+          const riskDelta = Math.abs(p.price_open - p.sl);
+          if (riskDelta > 0) {
+            const gainDelta = isBuy ? (p.price_current - p.price_open) : (p.price_open - p.price_current);
+            floatingRR = gainDelta / riskDelta;
+            if (floatingRR >= 2.0) isAt2RR = true;
+          }
+        }
+
+        return `
+          <div class="p-4 rounded-xl bg-[#080b14] border-2 ${isBuy ? 'border-emerald-500/40' : 'border-rose-500/40'} shadow-lg space-y-3 font-mono text-xs">
+            
+            <!-- Header Row: Ticket, Type, Lots, Floating PnL -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+              <div class="flex items-center gap-3">
+                <span class="px-2.5 py-1 rounded text-xs font-black ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'}">
+                  ${p.type} ${p.symbol}
+                </span>
+                <span class="text-slate-400 text-xs font-bold">Ticket #${p.ticket}</span>
+                <span class="text-amber-400 font-bold">⚡ ${p.volume.toFixed(2)} Lots</span>
+              </div>
+
+              <!-- Floating PnL & 2RR Target Badge -->
+              <div class="flex items-center gap-3">
+                ${isAt2RR ? `
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                    ⚡ TARGET +2.0 RR REACHED
+                  </span>
+                ` : `
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">
+                    Floating: 1:${floatingRR > 0 ? floatingRR.toFixed(2) : '0.00'} RR
+                  </span>
+                `}
+                <span class="text-base font-black ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${isProf ? '+' : ''}$${p.profit.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <!-- Price Metrics Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 text-[11px]">
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block">OPEN PRICE</span>
+                <span class="font-bold text-white">${p.price_open.toFixed(2)}</span>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block">CURRENT PRICE</span>
+                <span class="font-bold text-cyan-400">${p.price_current.toFixed(2)}</span>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block">CURRENT SL</span>
+                <span class="font-bold ${p.sl > 0 ? 'text-rose-400' : 'text-slate-500'}">${p.sl > 0 ? p.sl.toFixed(2) : 'NONE'}</span>
+              </div>
+              <div>
+                <span class="text-[9px] uppercase text-slate-500 block">CURRENT TP</span>
+                <span class="font-bold ${p.tp > 0 ? 'text-emerald-400' : 'text-slate-500'}">${p.tp > 0 ? p.tp.toFixed(2) : 'NONE'}</span>
+              </div>
+            </div>
+
+            <!-- In-Panel Interactive SL, TP, and Partial Close Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              
+              <!-- SL Adjuster -->
+              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Adjust Stop Loss</span>
+                <div class="flex items-center gap-1">
+                  <button type="button" onclick="stepVal('pos-sl-${p.ticket}', -0.50)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-bold">-</button>
+                  <input type="number" step="0.01" id="pos-sl-${p.ticket}" value="${p.sl > 0 ? p.sl.toFixed(2) : p.price_open.toFixed(2)}" class="w-full bg-[#080b14] border border-slate-700 rounded px-2 py-1 text-center text-xs text-white">
+                  <button type="button" onclick="stepVal('pos-sl-${p.ticket}', 0.50)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-bold">+</button>
+                  <button type="button" onclick="handleModifyPosition(${p.ticket})" class="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded text-[10px] font-bold">SET</button>
+                </div>
+              </div>
+
+              <!-- TP Adjuster -->
+              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Adjust Take Profit</span>
+                <div class="flex items-center gap-1">
+                  <button type="button" onclick="stepVal('pos-tp-${p.ticket}', -0.50)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-bold">-</button>
+                  <input type="number" step="0.01" id="pos-tp-${p.ticket}" value="${p.tp > 0 ? p.tp.toFixed(2) : p.price_open.toFixed(2)}" class="w-full bg-[#080b14] border border-slate-700 rounded px-2 py-1 text-center text-xs text-white">
+                  <button type="button" onclick="stepVal('pos-tp-${p.ticket}', 0.50)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 font-bold">+</button>
+                  <button type="button" onclick="handleModifyPosition(${p.ticket})" class="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold">SET</button>
+                </div>
+              </div>
+
+              <!-- Partial Close & Tactical Quick Actions -->
+              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Close Volume / Tactical</span>
+                <div class="flex items-center gap-1.5">
+                  <input type="number" step="0.01" min="0.01" max="${p.volume}" id="pos-part-vol-${p.ticket}" value="${(p.volume * 0.5).toFixed(2)}" class="w-16 bg-[#080b14] border border-slate-700 rounded px-2 py-1 text-center text-xs text-white">
+                  <button type="button" onclick="handlePartialClose(${p.ticket})" class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold">Close Lots</button>
+                  <button type="button" onclick="handleMoveSingleBE(${p.ticket})" class="px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded text-[10px] font-bold" title="Move this position to BE (+0.40)">Move BE</button>
+                  <button type="button" onclick="closeSinglePosition(${p.ticket})" class="px-2 py-1 bg-rose-500 hover:bg-rose-400 text-black rounded text-[10px] font-black ml-auto">CLOSE</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      totalPnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`;
+      totalPnlEl.className = `text-base font-black font-mono ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
+
+    // Render Recent Real MT5 Closed Deals
+    function renderRecentDeals(deals) {
+      const container = document.getElementById('recent-deals-list');
+      if (!deals || deals.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-6 text-slate-500 text-xs">
+            No closed trades recorded yet on this account. Real MT5 deals will populate here automatically upon trade exit.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = deals.slice(0, 5).map(d => {
+        const isProf = d.net_pnl >= 0;
+        const isBuy = d.type === 'BUY';
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-lg bg-[#080b14] border border-slate-800/60">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full ${isBuy ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'} flex items-center justify-center font-bold text-[10px]">
+                ${d.type}
+              </div>
+              <div>
+                <div class="font-bold text-slate-200">${d.symbol} Deal #${d.ticket}</div>
+                <div class="text-[10px] text-slate-400">${d.volume} Lots @ ${d.price.toFixed(2)} • ${d.time}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
+                ${isProf ? '+' : ''}$${d.net_pnl.toFixed(2)}
+              </div>
+              <div class="text-[10px] text-slate-500">Real Deal</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSignalsQueue(signals) {
+      const container = document.getElementById('queue-signals-list');
+      document.getElementById('badge-pending-count').textContent = `${signals.length} PENDING`;
+
+      if (signals.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 text-slate-500 text-xs font-mono">
+            No pending setups in queue. Awaiting institutional displacement sweeps or click <b>[+ Test Signal]</b>.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = signals.map(s => {
+        const isBuy = s.action.toUpperCase().includes('BUY');
+        const equity = latestAccountState.equity || 100000.0;
+        const riskPct = currentSettings.custom_risk_pct || 0.50;
+        const cashRisk = equity * (riskPct / 100.0);
+        const riskDelta = Math.abs(s.entry - s.sl);
+        const calcLots = Math.max(0.01, Math.min(100.0, cashRisk / (riskDelta * 100.0))).toFixed(2);
+
+        const dynamicTP = isBuy 
+          ? (s.entry + (riskDelta * currentSettings.target_rr)).toFixed(2)
+          : (s.entry - (riskDelta * currentSettings.target_rr)).toFixed(2);
+
+        const zoneName = s.zone_type || (isBuy ? "DBR Demand Zone" : "RBD Supply Zone");
+        const zoneDepth = s.zone_depth || (riskDelta - (currentSettings.spread_buffer_usd * 2)).toFixed(2);
+
+        return `
+          <div class="p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-l-4 border-l-emerald-500 border-slate-800' : 'border-l-4 border-l-rose-500 border-slate-800'} space-y-3 font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}">
+                ${s.action}
+              </span>
+              <span class="text-slate-300 font-bold">${s.symbol} • ${s.time}</span>
+              <span class="text-amber-400 font-bold text-sm">⚡ ${calcLots} LOTS</span>
+            </div>
+
+            <div class="p-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-[11px]">
+              <span><b>Zone:</b> ${zoneName}</span>
+              <span><b>Depth:</b> $${zoneDepth}</span>
+              <span><b>Risk:</b> $${cashRisk.toFixed(2)} (${riskPct}%)</span>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2 p-2.5 rounded bg-slate-950/70 border border-slate-800/60 text-center">
+              <div>
+                <span class="block text-[9px] uppercase text-slate-500">ENTRY</span>
+                <span class="font-bold text-cyan-400">${s.entry.toFixed(2)}</span>
+              </div>
+              <div>
+                <span class="block text-[9px] uppercase text-slate-500">INVALIDATION SL</span>
+                <span class="font-bold text-rose-400">${s.sl.toFixed(2)}</span>
+              </div>
+              <div>
+                <span class="block text-[9px] uppercase text-slate-500">TARGET (1:${currentSettings.target_rr.toFixed(1)})</span>
+                <span class="font-bold text-emerald-400">${dynamicTP}</span>
+              </div>
+              <div>
+                <span class="block text-[9px] uppercase text-slate-500">LOTS</span>
+                <span class="font-bold text-amber-400">${calcLots}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <button onclick="approveSignal('${s.id}')" class="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition shadow-md shadow-emerald-500/20 text-xs">
+                ✅ APPROVE & DISPATCH
+              </button>
+              <button onclick="declineSignal('${s.id}')" class="flex-1 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 font-bold transition text-xs">
+                ❌ DECLINE
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      enforceAuth();
+      loadAccountsList();
+      setInterval(refreshState, 1000);
+      refreshState();
+    });
+  </script>
+</body>
+</html>

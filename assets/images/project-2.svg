@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c0a12" />
+      <stop offset="50%" stop-color="#181126" />
+      <stop offset="100%" stop-color="#07060a" />
+    </linearGradient>
+    <linearGradient id="amberGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA800" />
+      <stop offset="100%" stop-color="#FF5500" />
+    </linearGradient>
+    <linearGradient id="sphereGrad" x1="30%" y1="20%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#FFA800" />
+      <stop offset="40%" stop-color="#9333EA" />
+      <stop offset="100%" stop-color="#00FFE0" />
+    </linearGradient>
+    <filter id="glow2" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="20" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <rect width="800" height="500" fill="url(#bg2)" />
+
+  <!-- Ambient light -->
+  <circle cx="400" cy="250" r="180" fill="#FFA800" opacity="0.14" filter="url(#glow2)" />
+  <circle cx="580" cy="320" r="150" fill="#9333EA" opacity="0.16" filter="url(#glow2)" />
+
+  <!-- 3D Geometric Floating Spheres / Rings -->
+  <g transform="translate(400, 240)">
+    <!-- Orbit Rings -->
+    <ellipse cx="0" cy="0" rx="220" ry="80" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" transform="rotate(-25)" />
+    <ellipse cx="0" cy="0" rx="170" ry="60" fill="none" stroke="url(#amberGlow)" stroke-width="2" transform="rotate(15)" opacity="0.6" />
+    
+    <!-- Big 3D Sphere -->
+    <circle cx="0" cy="0" r="95" fill="url(#sphereGrad)" filter="url(#glow2)" opacity="0.3" />
+    <circle cx="0" cy="0" r="90" fill="url(#sphereGrad)" />
+    
+    <!-- Sphere Lighting highlight -->
+    <ellipse cx="-25" cy="-30" rx="45" ry="30" fill="#FFFFFF" opacity="0.35" transform="rotate(-20)" filter="url(#glow2)" />
+    
+    <!-- Small orbiting satellite spheres -->
+    <circle cx="150" cy="-60" r="22" fill="#00FFE0" filter="url(#glow2)" />
+    <circle cx="-160" cy="50" r="16" fill="#FFA800" filter="url(#glow2)" />
+  </g>
+
+  <!-- Sleek HUD overlay elements -->
+  <rect x="50" y="50" width="180" height="54" rx="10" fill="rgba(20, 16, 32, 0.75)" stroke="rgba(255,255,255,0.1)" />
+  <text x="68" y="74" fill="#94A3B8" font-family="sans-serif" font-size="10" font-weight="bold">RENDER MODE</text>
+  <text x="68" y="93" fill="#FFA800" font-family="sans-serif" font-size="14" font-weight="900">WebGL Raymarching</text>
+
+  <rect x="570" y="390" width="180" height="60" rx="10" fill="rgba(20, 16, 32, 0.75)" stroke="rgba(255,255,255,0.1)" />
+  <text x="588" y="415" fill="#94A3B8" font-family="sans-serif" font-size="10" font-weight="bold">FPS PERFORMANCE</text>
+  <text x="588" y="437" fill="#00FFE0" font-family="sans-serif" font-size="16" font-weight="900">120 FPS • 0.8ms</text>
+</svg>
