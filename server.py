@@ -75,6 +75,7 @@ class SettingsUpdate(BaseModel):
     execution_mode: Optional[str] = None
     target_rr: Optional[float] = None
     spread_buffer_usd: Optional[float] = None
+    sl_cover_buffer: Optional[float] = None
     auto_be_enabled: Optional[bool] = None
     auto_be_trigger_rr: Optional[float] = None
     trade_style: Optional[str] = None  # "day" or "swing"
@@ -228,8 +229,10 @@ async def get_state():
         "execution_mode": cockpit_state["execution_mode"],
         "target_rr": cockpit_state["target_rr"],
         "spread_buffer_usd": cockpit_state["spread_buffer_usd"],
+        "sl_cover_buffer": cockpit_state["spread_buffer_usd"],
         "auto_be_enabled": cockpit_state["auto_be_enabled"],
         "auto_be_trigger_rr": cockpit_state["auto_be_trigger_rr"],
+        "trade_style": cockpit_state.get("trade_style", "day"),
         "auto_be_actions_recent": auto_be_actions,
         "account": acc,
         "accounts_list": account_manager.get_accounts(),
@@ -278,8 +281,9 @@ async def update_settings(settings: SettingsUpdate):
         cockpit_state["target_rr"] = settings.target_rr
         config.MIN_RR_RATIO = settings.target_rr
 
-    if settings.spread_buffer_usd is not None and 0.1 <= settings.spread_buffer_usd <= 5.0:
-        cockpit_state["spread_buffer_usd"] = settings.spread_buffer_usd
+    buffer_val = settings.sl_cover_buffer if settings.sl_cover_buffer is not None else settings.spread_buffer_usd
+    if buffer_val is not None and 0.0 <= buffer_val <= 5.0:
+        cockpit_state["spread_buffer_usd"] = round(buffer_val, 2)
 
     if settings.auto_be_enabled is not None:
         cockpit_state["auto_be_enabled"] = settings.auto_be_enabled
@@ -298,7 +302,7 @@ async def update_settings(settings: SettingsUpdate):
                 cockpit_state["target_rr"] = 3.0
                 config.MIN_RR_RATIO = 3.0
 
-    logger.info(f"[SETTINGS UPDATED] Risk: {cockpit_state['custom_risk_pct']}% | Mode: {cockpit_state['risk_mode']} | Auto-BE: {cockpit_state['auto_be_enabled']} | RR: 1:{cockpit_state['target_rr']} | Style: {cockpit_state.get('trade_style', 'day')}")
+    logger.info(f"[SETTINGS UPDATED] Risk: {cockpit_state['custom_risk_pct']}% | Mode: {cockpit_state['risk_mode']} | Auto-BE: {cockpit_state['auto_be_enabled']} | RR: 1:{cockpit_state['target_rr']} | Style: {cockpit_state.get('trade_style', 'day')} | SL Cover: ${cockpit_state['spread_buffer_usd']:.2f}")
     return {"status": "success", "settings": cockpit_state}
 
 # ==============================================================================
@@ -343,6 +347,54 @@ async def switch_account(acc_id: str):
 async def delete_account(acc_id: str):
     deleted = account_manager.delete_account(acc_id)
     return {"status": "success" if deleted else "not_found"}
+
+class AccountSettingsRequest(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    auto_tp: Optional[bool] = None
+    tp_cap_rr: Optional[float] = None
+    tp_adjust_pts: Optional[float] = None
+    sl_cover_buffer: Optional[float] = None
+
+@app.post("/api/accounts/{acc_id}/settings")
+async def update_account_settings_api(acc_id: str, req: AccountSettingsRequest):
+    """Updates per-account tactical parameters (Auto TP, TP Cap, Adjust TP, SL Cover Buffer, Active state)."""
+    data = req.dict(exclude_unset=True)
+    updated = account_manager.update_account_settings(acc_id, data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return {"status": "success", "account": updated}
+
+@app.post("/api/accounts/{acc_id}/close-all")
+async def account_close_all_api(acc_id: str):
+    """Emergency close for 100% of open positions on a specific MT5 account."""
+    acc = account_manager.get_account_by_id(acc_id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+    active = account_manager.get_active_account()
+    needs_revert = (active and active["id"] != acc_id)
+    if needs_revert:
+        mt5_engine.switch_account(acc)
+    res = mt5_engine.close_all_positions_and_pending("XAUUSD")
+    if needs_revert:
+        mt5_engine.switch_account(active)
+    return {"status": "success", "account_id": acc_id, "account_name": acc["name"], "result": res}
+
+@app.post("/api/accounts/{acc_id}/be-all")
+async def account_be_all_api(acc_id: str):
+    """Moves all profitable open positions on a specific MT5 account to Breakeven (+ SL cover buffer)."""
+    acc = account_manager.get_account_by_id(acc_id)
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+    active = account_manager.get_active_account()
+    needs_revert = (active and active["id"] != acc_id)
+    if needs_revert:
+        mt5_engine.switch_account(acc)
+    buffer = acc.get("sl_cover_buffer", cockpit_state["spread_buffer_usd"])
+    res = mt5_engine.move_all_to_breakeven("XAUUSD", buffer_usd=buffer)
+    if needs_revert:
+        mt5_engine.switch_account(active)
+    return {"status": "success", "account_id": acc_id, "account_name": acc["name"], "result": res}
 
 # ==============================================================================
 # TACTICAL INSTITUTIONAL ACTIONS (BE MOVE ALL / CLOSE ALL)
@@ -432,12 +484,114 @@ async def get_journal_history(account_id: Optional[str] = None):
     }
 
 # ==============================================================================
-# SIGNAL APPROVAL QUEUE (Positions Approve Pipeline)
+# SIGNAL APPROVAL QUEUE (Positions Approve Pipeline & Multicast Engine)
 # ==============================================================================
+
+def calculate_bot_tp(symbol: str, action: str, entry: float, sl: float, scenario_id: int = 1) -> float:
+    """
+    Bot-Decided Take Profit using Pure Institutional Supply & Demand (S&D).
+    Longs target external Buy-Side Liquidity (BSL) swing highs / opposing Supply bases.
+    Shorts target external Sell-Side Liquidity (SSL) swing lows / opposing Demand bases.
+    Enforces minimum 1:3 RR rule.
+    """
+    risk_delta = max(0.50, abs(entry - sl))
+    if scenario_id == 1:
+        default_rr = 3.5
+    elif scenario_id == 2:
+        default_rr = 4.0
+    elif scenario_id == 3:
+        default_rr = 3.0
+    else:
+        default_rr = max(3.0, cockpit_state.get("target_rr", 3.0))
+
+    if "BUY" in action.upper():
+        return round(entry + (risk_delta * default_rr), 2)
+    else:
+        return round(entry - (risk_delta * default_rr), 2)
+
+def execute_multicast_signal(exec_alert: AlertPayload, scenario_id: int = 1) -> Dict[str, Any]:
+    """
+    Broadcasts and sets limit orders simultaneously across ALL active MT5 accounts.
+    Zero sequential delays. Applies per-account Auto TP, TP Cap, Adjust TP, and SL cover adjustments.
+    """
+    active_accounts = account_manager.get_active_accounts()
+    current_active = account_manager.get_active_account()
+    results = []
+
+    for acc in active_accounts:
+        try:
+            if current_active and acc["id"] != current_active.get("id"):
+                mt5_engine.switch_account(acc)
+
+            acc_alert = AlertPayload(**exec_alert.dict())
+
+            auto_tp = acc.get("auto_tp", True)
+            tp_cap = acc.get("tp_cap_rr")
+            tp_adjust = acc.get("tp_adjust_pts", 0.0)
+            risk_delta = max(0.50, abs(acc_alert.entry - acc_alert.sl))
+
+            if auto_tp:
+                bot_tp = calculate_bot_tp(acc_alert.symbol, acc_alert.action, acc_alert.entry, acc_alert.sl, scenario_id)
+                if tp_cap and tp_cap > 0:
+                    capped_dist = risk_delta * tp_cap
+                    if "BUY" in acc_alert.action.upper():
+                        acc_alert.tp1 = min(bot_tp, round(acc_alert.entry + capped_dist, 2))
+                    else:
+                        acc_alert.tp1 = max(bot_tp, round(acc_alert.entry - capped_dist, 2))
+                else:
+                    acc_alert.tp1 = bot_tp
+            else:
+                rr = tp_cap if (tp_cap and tp_cap > 0) else cockpit_state.get("target_rr", 3.0)
+                if "BUY" in acc_alert.action.upper():
+                    acc_alert.tp1 = round(acc_alert.entry + (risk_delta * rr), 2)
+                else:
+                    acc_alert.tp1 = round(acc_alert.entry - (risk_delta * rr), 2)
+
+            if tp_adjust != 0.0:
+                if "BUY" in acc_alert.action.upper():
+                    acc_alert.tp1 = round(acc_alert.tp1 + tp_adjust, 2)
+                else:
+                    acc_alert.tp1 = round(acc_alert.tp1 - tp_adjust, 2)
+
+            sl_cover = acc.get("sl_cover_buffer", cockpit_state.get("spread_buffer_usd", 0.40))
+            acc_alert.comment = f"BlueX [{acc.get('name')[:8]}] SL+{sl_cover:.2f}"
+
+            res = mt5_engine.execute_alert(acc_alert)
+            results.append({
+                "account_id": acc["id"],
+                "account_name": acc["name"],
+                "login": acc["login"],
+                "status": res.get("status"),
+                "order_ticket": res.get("order_ticket"),
+                "volume": res.get("volume"),
+                "entry": acc_alert.entry,
+                "sl": acc_alert.sl,
+                "tp": acc_alert.tp1,
+                "sl_cover_buffer": sl_cover,
+                "message": res.get("message", "Limit order set")
+            })
+        except Exception as e:
+            logger.error(f"[MULTICAST ERROR] Account #{acc.get('login')} failed: {e}")
+            results.append({
+                "account_id": acc["id"],
+                "account_name": acc["name"],
+                "login": acc["login"],
+                "status": "error",
+                "message": str(e)
+            })
+
+    if current_active and active_accounts and active_accounts[-1]["id"] != current_active["id"]:
+        mt5_engine.switch_account(current_active)
+
+    return {
+        "status": "success",
+        "total_dispatched": len(results),
+        "accounts": results
+    }
 
 @app.post("/api/signals/{signal_id}/approve")
 async def approve_signal(signal_id: str):
-    """Executes a queued signal to MT5 after manual operator verification."""
+    """Executes a queued signal to MT5 across all active accounts simultaneously after operator confirmation."""
     target_idx = None
     for i, s in enumerate(cockpit_state["pending_signals"]):
         if s["id"] == signal_id:
@@ -448,19 +602,13 @@ async def approve_signal(signal_id: str):
         raise HTTPException(status_code=404, detail="Signal not found or already processed")
 
     sig = cockpit_state["pending_signals"].pop(target_idx)
-
-    # Recalculate TP based on current dynamic RR setting
     entry = sig["entry"]
     sl = sig["sl"]
-    risk_delta = abs(entry - sl)
-    rr = cockpit_state["target_rr"]
-
-    if "BUY" in sig["action"].upper():
-        tp = round(entry + (risk_delta * rr), 2)
-    else:
-        tp = round(entry - (risk_delta * rr), 2)
-
+    scenario_id = sig.get("scenario_id", 1)
     risk_pct = cockpit_state["custom_risk_pct"]
+
+    # Bot decides TP using Pure Institutional S&D framework
+    tp = calculate_bot_tp(sig["symbol"], sig["action"], entry, sl, scenario_id)
 
     payload = AlertPayload(
         secret=config.WEBHOOK_SECRET_KEY,
@@ -474,13 +622,13 @@ async def approve_signal(signal_id: str):
         comment=f"BlueX Approved ({risk_pct}%)"
     )
 
-    mt5_res = mt5_engine.execute_alert(payload)
-    logger.info(f"[MANUAL SIGNAL APPROVED] Dispatched ticket {signal_id} -> Result: {mt5_res.get('status')}")
+    multicast_res = execute_multicast_signal(payload, scenario_id=scenario_id)
+    logger.info(f"[MANUAL SIGNAL APPROVED] Dispatched signal {signal_id} simultaneously to {len(multicast_res.get('accounts', []))} account(s)")
 
     return {
         "status": "success",
-        "message": f"Signal {signal_id} approved and dispatched to MT5",
-        "mt5_response": mt5_res
+        "message": f"Signal {signal_id} approved and dispatched simultaneously across all active MT5 accounts",
+        "multicast": multicast_res
     }
 
 @app.post("/api/signals/{signal_id}/reject")
@@ -575,15 +723,15 @@ async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, A
         else:
             exec_alert.tp1 = round(exec_alert.entry - (risk_delta * cockpit_state["target_rr"]), 2)
 
-    # 1. Automated Execution Mode
+    # 1. Automated Execution Mode (Simultaneous Multicast to all active accounts)
     if cockpit_state["execution_mode"] == "AUTO":
-        mt5_result = mt5_engine.execute_alert(exec_alert)
+        multicast_res = execute_multicast_signal(exec_alert, scenario_id=1)
         elapsed_ms = (time.perf_counter() - t_start) * 1000.0
-        logger.info(f"[AUTO-EXECUTION COMPLETE] {action_upper} on {exec_alert.symbol} in {elapsed_ms:.2f}ms")
+        logger.info(f"[AUTO-EXECUTION COMPLETE] {action_upper} multicast to {len(multicast_res.get('accounts', []))} account(s) in {elapsed_ms:.2f}ms")
         return {
             "mode": "AUTO",
             "latency_ms": round(elapsed_ms, 2),
-            "mt5_response": mt5_result
+            "multicast": multicast_res
         }
 
     # 2. Manual Approval Mode (Positions Approve Queue)
@@ -661,7 +809,7 @@ async def simulate_institutional_signal(scenario: int = 1, request: Request = No
         entry = round(zone_bottom - spread_buf, 2)
         sl = round(zone_top + spread_buf, 2)
         risk_delta = max(0.50, abs(sl - entry))
-        tp1 = round(entry - (risk_delta * rr), 2)
+        tp1 = calculate_bot_tp("XAUUSD", action, entry, sl, scenario_id=2)
         tp2 = round(entry - (risk_delta * (rr + 2.0)), 2)
         comment = "Scenario 2: CHoCH Reversal RBD"
     elif scenario_choice == 3:
@@ -674,7 +822,7 @@ async def simulate_institutional_signal(scenario: int = 1, request: Request = No
         entry = round(zone_top + spread_buf, 2)
         sl = round(zone_bottom - spread_buf, 2)
         risk_delta = max(0.50, abs(entry - sl))
-        tp1 = round(entry + (risk_delta * 2.5), 2)
+        tp1 = calculate_bot_tp("XAUUSD", action, entry, sl, scenario_id=3)
         tp2 = round(entry + (risk_delta * 4.0), 2)
         comment = "Scenario 3: Range Equilibrium Base"
     else:
@@ -688,7 +836,7 @@ async def simulate_institutional_signal(scenario: int = 1, request: Request = No
         entry = round(zone_top + spread_buf, 2)
         sl = round(zone_bottom - spread_buf, 2)
         risk_delta = max(0.50, abs(entry - sl))
-        tp1 = round(entry + (risk_delta * rr), 2)
+        tp1 = calculate_bot_tp("XAUUSD", action, entry, sl, scenario_id=1)
         tp2 = round(entry + (risk_delta * (rr + 2.0)), 2)
         comment = "Scenario 1: BOS Continuation DBR"
 
@@ -718,9 +866,35 @@ async def simulate_institutional_signal(scenario: int = 1, request: Request = No
         "comment": comment
     }
 
-    cockpit_state["pending_signals"].insert(0, test_sig)
-    logger.info(f"[TEST SIGNAL SIMULATED] {scenario_name} | ID: {sig_id} | {action} @ {entry} | SL: {sl} | Lots: {calc_lots}")
-    return {"status": "success", "signal": test_sig}
+    # If Auto Mode is active, bot sets limit automatically on all active accounts without operator interference
+    if cockpit_state["execution_mode"] == "AUTO":
+        payload = AlertPayload(
+            secret=config.WEBHOOK_SECRET_KEY,
+            symbol="XAUUSD",
+            action=action,
+            entry=entry,
+            sl=sl,
+            tp1=tp1,
+            tp2=tp2,
+            risk_pct=risk_pct,
+            magic=880100 + scenario_choice,
+            comment=f"{scenario_name} (Auto)"
+        )
+        multicast_res = execute_multicast_signal(payload, scenario_id=scenario_choice)
+        logger.info(f"[AUTO-MODE TRIGGERED] {scenario_name} set limits on {len(multicast_res.get('accounts', []))} account(s)")
+        return {
+            "status": "success",
+            "mode": "AUTO",
+            "signal": test_sig,
+            "multicast": multicast_res
+        }
+    else:
+        # Position Approve mode: push to approving channel
+        cockpit_state["pending_signals"].insert(0, test_sig)
+        if len(cockpit_state["pending_signals"]) > 20:
+            cockpit_state["pending_signals"].pop()
+        logger.info(f"[TEST SIGNAL ENQUEUED] {scenario_name} | ID: {sig_id} | {action} @ {entry} | SL: {sl} | Lots: {calc_lots}")
+        return {"status": "success", "mode": "MANUAL", "signal": test_sig}
 
 # MT4 Polling Endpoint
 @app.get("/mt4/poll")

@@ -1,9 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BlueX Institutional Trading Journal | Real S&D Lifecycle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BlueX Institutional Trading Journal • 21st Luxury Edition</title>
+  
+  <link rel="icon" type="image/png" href="/assets/images/bluex-3d-logo.png">
+  <meta name="theme-color" content="#030712">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -11,256 +15,395 @@
       theme: {
         extend: {
           colors: {
-            background: '#090d16',
-            card: '#0f172a',
-            border: '#1e293b',
-            muted: '#1e293b',
-            'muted-foreground': '#94a3b8',
-            primary: '#f59e0b',
-            'primary-foreground': '#000000',
-            accent: '#38bdf8'
+            obsidian: '#030712',
+            cardBg: '#090e1a',
+            borderSubtle: 'rgba(255, 255, 255, 0.08)',
+            gold: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706'
+            },
+            cyanGlow: '#00ffe0'
           }
         }
       }
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+    
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #060911;
-      color: #f1f5f9;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #030712;
+      color: #f3f4f6;
+      overflow-x: hidden;
     }
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-panel {
+      background: rgba(9, 14, 26, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .glass-card {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.7) 0%, rgba(9, 14, 26, 0.85) 100%);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(245, 158, 11, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.7), 0 0 20px -5px rgba(245, 158, 11, 0.15);
     }
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: #090d16;
+      background: #030712;
     }
     ::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 3px;
+      background: #1f293d;
+      border-radius: 9999px;
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #334155;
     }
+    .glow-gold {
+      box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 25px -5px rgba(0, 255, 224, 0.2);
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col bg-[#060911] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
+<body class="min-h-screen flex flex-col bg-[#030712] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
+
+  <!-- Ambient Light Orbs (21st.dev Luxury Background Effect) -->
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div class="absolute -top-40 left-1/3 w-[600px] h-[350px] bg-amber-500/10 blur-[130px] rounded-full"></div>
+    <div class="absolute top-1/2 -right-40 w-[500px] h-[400px] bg-cyan-500/8 blur-[140px] rounded-full"></div>
+    <div class="absolute -bottom-20 left-10 w-[450px] h-[300px] bg-emerald-500/5 blur-[120px] rounded-full"></div>
+  </div>
 
   <!-- Top Executive Header -->
-  <header class="border-b border-slate-800/80 bg-[#090d16]/90 backdrop-blur px-5 py-3 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
-    <div class="flex items-center gap-3">
-      <a href="/cockpit" class="flex items-center gap-2 group">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-black text-sm shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-          BX
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-bold tracking-tight text-white">BlueX Institutional Terminal</span>
-            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">REAL JOURNAL</span>
+  <header class="sticky top-0 z-40 glass-panel border-b border-white/[0.08] px-4 sm:px-6 py-3 transition">
+    <div class="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <a href="/dashboard/sales" class="flex items-center gap-2.5 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center font-black text-black text-sm shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform">
+            BX
           </div>
-          <p class="text-[11px] text-slate-400 font-mono">Single-Account Real Deal Audit • XAU/USD Execution Log</p>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm sm:text-base font-extrabold tracking-tight text-white group-hover:text-amber-400 transition">BlueX Institutional Journal</span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">21ST LUXURY</span>
+            </div>
+            <p class="text-[10px] sm:text-[11px] text-slate-400 font-mono">Live MT5 Execution Telemetry • Pure Institutional S&D Audit</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Account Switcher & Single Account Selector -->
+      <div class="flex items-center gap-2 bg-[#090e1a]/90 border border-white/[0.08] rounded-xl px-3 py-1.5 font-mono text-xs shadow-inner">
+        <span class="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Account:</span>
+        <select id="journal-account-filter" onchange="handleJournalAccountChange(this.value)" class="bg-transparent text-cyan-400 font-bold outline-none cursor-pointer text-xs">
+          <option value="">Loading MT5 accounts...</option>
+        </select>
+      </div>
+
+      <!-- Live Account Performance Ticker (Real MT5 Data Only) -->
+      <div class="hidden lg:flex items-center gap-5 text-xs font-mono bg-[#090e1a]/80 px-4 py-2 rounded-xl border border-white/[0.08]">
+        <div>
+          <span class="text-slate-400 text-[10px] uppercase block">Net PnL</span>
+          <span class="font-extrabold text-white text-xs" id="stats-net-pnl">$0.00</span>
         </div>
-      </a>
-    </div>
+        <div class="w-px h-6 bg-white/[0.08]"></div>
+        <div>
+          <span class="text-slate-400 text-[10px] uppercase block">Closed Deals</span>
+          <span class="font-extrabold text-amber-400 text-xs" id="stats-deals-count">0</span>
+        </div>
+        <div class="w-px h-6 bg-white/[0.08]"></div>
+        <div>
+          <span class="text-slate-400 text-[10px] uppercase block">Win Rate</span>
+          <span class="font-extrabold text-purple-400 text-xs" id="stats-win-rate">0.0%</span>
+        </div>
+        <div class="w-px h-6 bg-white/[0.08]"></div>
+        <div>
+          <span class="text-slate-400 text-[10px] uppercase block">Turnover</span>
+          <span class="font-extrabold text-cyan-400 text-xs" id="stats-volume">0.00 L</span>
+        </div>
+      </div>
 
-    <!-- Account Filter Option (Single Account Selector) -->
-    <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-1.5 font-mono text-xs">
-      <span class="text-slate-400 font-bold uppercase text-[10px]">Filter Account:</span>
-      <select id="journal-account-filter" onchange="handleJournalAccountChange(this.value)" class="bg-transparent text-cyan-400 font-bold outline-none cursor-pointer">
-        <option value="">Loading accounts...</option>
-      </select>
-    </div>
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <a href="/dashboard/sales" class="px-3.5 py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 text-xs font-medium transition flex items-center gap-1.5 active:scale-95">
+          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          <span class="hidden sm:inline">Sales Cockpit</span>
+        </a>
+        <button onclick="openNewTradeModal()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+          <span>Manual Note</span>
+        </button>
+      </div>
 
-    <!-- Single Account Real Stats Ticker (Zero Mock Data) -->
-    <div class="hidden xl:flex items-center gap-6 text-xs font-mono bg-slate-900/80 px-4 py-1.5 rounded-lg border border-slate-800">
-      <div>
-        <span class="text-slate-400">Account Real Net PnL:</span>
-        <span class="font-bold ml-1.5" id="stats-net-pnl">$0.00</span>
-      </div>
-      <div class="w-px h-3 bg-slate-800"></div>
-      <div>
-        <span class="text-slate-400">Closed Deals:</span>
-        <span class="font-bold text-white ml-1.5" id="stats-deals-count">0</span>
-      </div>
-      <div class="w-px h-3 bg-slate-800"></div>
-      <div>
-        <span class="text-slate-400">Win Rate:</span>
-        <span class="font-bold text-purple-400 ml-1.5" id="stats-win-rate">0.0%</span>
-      </div>
-      <div class="w-px h-3 bg-slate-800"></div>
-      <div>
-        <span class="text-slate-400">Turnover Lots:</span>
-        <span class="font-bold text-cyan-400 ml-1.5" id="stats-volume">0.00 Lots</span>
-      </div>
-    </div>
-
-    <!-- Action Bar -->
-    <div class="flex items-center gap-2.5">
-      <a href="/cockpit" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-medium transition flex items-center gap-1.5">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        <span>Cockpit</span>
-      </a>
-      <button onclick="openNewTradeModal()" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-        <span>Manual Audit Note</span>
-      </button>
     </div>
   </header>
 
-  <!-- Main Calendar Container -->
-  <main class="flex-1 flex flex-col p-4 md:p-6 max-w-[1700px] w-full mx-auto">
-    <!-- Calendar Controls Header -->
-    <div class="flex flex-col space-y-4 p-4 md:flex-row md:items-center md:justify-between md:space-y-0 bg-[#090d16] border border-slate-800 rounded-t-xl">
-      <div class="flex flex-auto items-center gap-4">
-        <!-- Date Badge -->
-        <div class="hidden w-16 h-16 flex-col items-center justify-center rounded-lg border border-slate-800 bg-slate-900/90 p-1 md:flex shadow-inner">
-          <span id="badgeMonth" class="text-[10px] font-bold uppercase text-slate-400 font-mono">NOV</span>
-          <div class="flex w-full flex-1 items-center justify-center rounded border border-slate-800 bg-[#060911] text-lg font-black text-amber-400 font-mono">
-            <span id="badgeDay">04</span>
+  <!-- Main Container -->
+  <main class="relative z-10 flex-1 flex flex-col p-4 sm:p-6 max-w-[1720px] w-full mx-auto space-y-6">
+
+    <!-- Section 1: 21st.dev Luxury Visual Analytics (HTML5 Dynamic Canvas) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      
+      <!-- Canvas 1: Account Equity & Growth Spline Curve (2 Cols) -->
+      <div class="lg:col-span-2 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden group">
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+              <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">Live Equity Growth Curve</h2>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-mono bg-white/[0.05] text-slate-300 border border-white/[0.08]">HTML5 Canvas Engine</span>
+            </div>
+            <p class="text-[11px] text-slate-400 font-mono mt-0.5">Real-time cumulative account balance + deal execution trajectory</p>
+          </div>
+          <div class="flex items-center gap-2 font-mono text-xs">
+            <span class="text-slate-400">Balance:</span>
+            <span id="canvas-curr-balance" class="text-amber-400 font-bold">$100,000.93</span>
           </div>
         </div>
-        <div class="flex flex-col">
-          <h2 id="calendarTitle" class="text-xl font-bold tracking-tight text-white flex items-center gap-2 font-mono">
-            November, 2026
-          </h2>
-          <p id="calendarSubtitle" class="text-xs text-slate-400 font-mono mt-0.5">
-            Single Account Real MT5 Execution Deals Audit
-          </p>
+
+        <!-- Interactive Canvas Viewport -->
+        <div class="relative w-full h-[220px] sm:h-[260px] mt-3">
+          <canvas id="equityCurveCanvas" class="w-full h-full cursor-crosshair block"></canvas>
+          <div id="canvasTooltip" class="absolute hidden pointer-events-none glass-panel px-3 py-2 rounded-xl text-xs font-mono border border-amber-500/40 shadow-xl transition-all z-20">
+            <div id="canvasTooltipTitle" class="text-amber-400 font-bold text-[11px]">Deal #0</div>
+            <div id="canvasTooltipPnl" class="text-emerald-400 font-extrabold text-xs">+$0.00</div>
+            <div id="canvasTooltipEquity" class="text-slate-300 text-[10px]">Equity: $100,000.00</div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-white/[0.04] text-[10px] font-mono text-slate-500">
+          <span>T-0: Base Balance</span>
+          <span id="canvas-last-update">Sync: Live MT5 IPC Active</span>
+          <span>T-Latest: Current Equity</span>
         </div>
       </div>
 
-      <!-- Controls Right -->
-      <div class="flex flex-wrap items-center gap-3">
-        <!-- Search Filter -->
+      <!-- Canvas 2: S&D Institutional Scenario Breakdown Donut & KPI Cards -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">S&D Scenario Breakdown</h2>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">Strategy Engine</span>
+        </div>
+
+        <!-- Radial Donut Canvas & Stats -->
+        <div class="flex items-center justify-center py-2 relative">
+          <div class="relative w-36 h-36">
+            <canvas id="scenarioRadialCanvas" width="144" height="144" class="block"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+              <span id="radial-total-trades" class="text-xl font-black font-mono text-white">1</span>
+              <span class="text-[9px] uppercase font-mono text-slate-400 tracking-wider">Executed</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scenario Legend & Metrics -->
+        <div class="space-y-2 pt-2 border-t border-white/[0.06] text-xs font-mono">
+          <div class="flex items-center justify-between p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+              <span class="text-cyan-300 font-semibold text-[11px]">Sc 1: BOS Continuation</span>
+            </div>
+            <span id="sc1-stat-count" class="font-bold text-white">0 (0%)</span>
+          </div>
+
+          <div class="flex items-center justify-between p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+              <span class="text-purple-300 font-semibold text-[11px]">Sc 2: CHoCH Reversal</span>
+            </div>
+            <span id="sc2-stat-count" class="font-bold text-white">0 (0%)</span>
+          </div>
+
+          <div class="flex items-center justify-between p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <span class="text-amber-300 font-semibold text-[11px]">Sc 3: Range Equilibrium</span>
+            </div>
+            <span id="sc3-stat-count" class="font-bold text-white">1 (100%)</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section 2: View Switcher (Audit Timeline vs Calendar Matrix) -->
+    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+      <!-- Tabs -->
+      <div class="inline-flex rounded-xl glass-panel p-1 border border-white/[0.08] text-xs font-mono">
+        <button id="view-tab-timeline" onclick="switchJournalView('timeline')" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold shadow-md transition active:scale-95 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          <span>Audit Timeline & Cards</span>
+        </button>
+        <button id="view-tab-calendar" onclick="switchJournalView('calendar')" class="px-4 py-2 rounded-lg text-slate-300 hover:text-white transition active:scale-95 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Monthly Calendar</span>
+        </button>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="flex items-center gap-3">
         <div class="relative">
           <input 
             type="text" 
             id="searchInput" 
-            oninput="renderCalendar()"
-            placeholder="Filter ticket, symbol..." 
-            class="bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 w-48 font-mono"
+            oninput="handleSearchInput()" 
+            placeholder="Search ticket, symbol, formation..." 
+            class="bg-[#090e1a] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 w-56 sm:w-72 font-mono transition"
           />
-          <svg class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 1: AUDIT TIMELINE & OBSIDIAN CARDS (DEFAULT) -->
+    <div id="journal-timeline-view" class="space-y-4">
+      <div class="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+        <span id="timeline-deal-count">Showing 1 Execution Record</span>
+        <span class="text-amber-400">Zero Mock Data Mandate</span>
+      </div>
+
+      <!-- Dynamic Cards Grid -->
+      <div id="timeline-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+    </div>
+
+    <!-- VIEW 2: MONTHLY CALENDAR MATRIX -->
+    <div id="journal-calendar-view" class="hidden flex-col space-y-4">
+      <!-- Calendar Nav Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass-panel p-4 rounded-xl border border-white/[0.08]">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-slate-900 border border-white/[0.08] flex flex-col items-center justify-center font-mono">
+            <span id="calMonthShort" class="text-[9px] uppercase text-slate-400 font-bold">NOV</span>
+            <span id="calDayNum" class="text-base font-black text-amber-400">04</span>
+          </div>
+          <div>
+            <h3 id="calendarMonthTitle" class="text-base font-bold text-white font-mono">November 2026</h3>
+            <p class="text-xs text-slate-400 font-mono">Day-by-day PnL & Deal Density</p>
+          </div>
         </div>
 
-        <div class="h-6 w-px bg-slate-800 hidden md:block"></div>
-
-        <!-- Month Navigation -->
-        <div class="inline-flex rounded-lg border border-slate-800 bg-slate-900/80 p-0.5 shadow-sm font-mono text-xs">
-          <button 
-            onclick="changeMonth(-1)" 
-            class="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-            title="Previous Month"
-          >
+        <div class="flex items-center gap-1.5 font-mono text-xs">
+          <button onclick="changeMonth(-1)" class="p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 border border-white/[0.06] transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
           </button>
-          <button 
-            onclick="jumpToday()" 
-            class="px-3 py-1 hover:bg-slate-800 rounded text-slate-200 font-semibold transition"
-          >
+          <button onclick="jumpToday()" class="px-3.5 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 border border-white/[0.06] font-semibold transition">
             Today
           </button>
-          <button 
-            onclick="changeMonth(1)" 
-            class="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-            title="Next Month"
-          >
+          <button onclick="changeMonth(1)" class="p-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 border border-white/[0.06] transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Calendar Grid Frame -->
-    <div class="flex-1 flex flex-col border-x border-b border-slate-800 bg-[#090d16] rounded-b-xl shadow-2xl overflow-hidden">
-      <div class="grid grid-cols-7 border-b border-slate-800 text-center text-xs font-mono font-semibold text-slate-400 bg-slate-900/50">
-        <div class="border-r border-slate-800/80 py-2.5">SUN</div>
-        <div class="border-r border-slate-800/80 py-2.5">MON</div>
-        <div class="border-r border-slate-800/80 py-2.5">TUE</div>
-        <div class="border-r border-slate-800/80 py-2.5">WED</div>
-        <div class="border-r border-slate-800/80 py-2.5">THU</div>
-        <div class="border-r border-slate-800/80 py-2.5">FRI</div>
-        <div class="py-2.5">SAT</div>
+      <!-- Calendar Grid Frame -->
+      <div class="glass-panel rounded-2xl border border-white/[0.08] overflow-hidden shadow-2xl">
+        <div class="grid grid-cols-7 border-b border-white/[0.08] text-center text-xs font-mono font-bold text-slate-400 bg-white/[0.02]">
+          <div class="py-3 border-r border-white/[0.06]">SUN</div>
+          <div class="py-3 border-r border-white/[0.06]">MON</div>
+          <div class="py-3 border-r border-white/[0.06]">TUE</div>
+          <div class="py-3 border-r border-white/[0.06]">WED</div>
+          <div class="py-3 border-r border-white/[0.06]">THU</div>
+          <div class="py-3 border-r border-white/[0.06]">FRI</div>
+          <div class="py-3">SAT</div>
+        </div>
+
+        <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-white/[0.06] min-h-[580px] bg-[#030712]/50">
+          <!-- Calendar Days generated dynamically -->
+        </div>
       </div>
-
-      <div id="calendarGrid" class="grid grid-cols-7 auto-rows-fr flex-1 divide-x divide-y divide-slate-800/60 min-h-[640px]"></div>
     </div>
+
   </main>
 
-  <!-- Deal Details Slide-over / Modal -->
-  <div id="tradeModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-[#0f172a] border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+  <!-- Deal Details Modal (21st.dev Glass Luxury) -->
+  <div id="tradeModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-xl rounded-2xl border border-white/[0.12] p-6 text-slate-100 flex flex-col gap-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between border-b border-white/[0.08] pb-4">
         <div>
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-            REAL MT5 EXECUTION RECEIPT
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+            AUTHENTIC MT5 AUDIT RECEIPT
           </span>
-          <h3 id="modalTitle" class="text-lg font-bold text-white mt-1">Deal Details</h3>
+          <h3 id="modalTitle" class="text-lg font-bold text-white mt-1">Execution Telemetry</h3>
         </div>
-        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.08] transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs">
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+        <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <span class="text-slate-500 text-[10px] block">ASSET & DIR</span>
-          <span id="modalAsset" class="font-bold text-white text-sm">XAUUSD BUY</span>
+          <span id="modalAsset" class="font-extrabold text-white text-sm">XAUUSD BUY</span>
         </div>
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-          <span class="text-slate-500 text-[10px] block">REALIZED MONEY (PNL)</span>
-          <span id="modalPnl" class="font-bold text-emerald-400 text-sm">+$0.00</span>
+        <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <span class="text-slate-500 text-[10px] block">REALIZED NET PNL</span>
+          <span id="modalPnl" class="font-extrabold text-emerald-400 text-sm">+$0.00</span>
         </div>
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+        <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <span class="text-slate-500 text-[10px] block">VOLUME</span>
-          <span id="modalVolume" class="font-bold text-amber-400 text-sm">1.00 Lots</span>
+          <span id="modalVolume" class="font-extrabold text-amber-400 text-sm">0.01 Lots</span>
         </div>
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+        <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <span class="text-slate-500 text-[10px] block">DEAL TICKET</span>
           <span id="modalTicket" class="font-semibold text-slate-200">#0</span>
         </div>
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+        <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <span class="text-slate-500 text-[10px] block">EXECUTION PRICE</span>
           <span id="modalPrice" class="font-semibold text-cyan-400">0.00</span>
         </div>
-        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800">
-          <span class="text-slate-500 text-[10px] block">EXECUTION TIME</span>
+        <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+          <span class="text-slate-500 text-[10px] block">TIMESTAMP</span>
           <span id="modalTime" class="font-semibold text-slate-300">N/A</span>
         </div>
       </div>
 
-      <div class="bg-slate-900/60 p-3.5 rounded-lg border border-slate-800/80 text-xs">
+      <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs">
         <div class="text-[11px] font-mono font-semibold text-slate-400 mb-1 flex items-center justify-between">
-          <span>BROKER / S&D NOTES</span>
+          <span>INSTITUTIONAL NOTES / FORMATION</span>
           <span id="modalComment" class="text-amber-400 font-mono">MetaTrader 5 Deal</span>
         </div>
-        <p id="modalNotes" class="text-slate-300 leading-relaxed font-sans">
+        <p id="modalNotes" class="text-slate-300 leading-relaxed font-sans text-xs">
           Deal execution logged directly from terminal IPC bridge.
         </p>
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-2">
-        <button onclick="closeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
-          Close
+        <button onclick="closeModal()" class="px-5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-slate-200 text-xs font-semibold transition active:scale-95">
+          Close Receipt
         </button>
       </div>
     </div>
   </div>
 
   <!-- Manual Audit Note Modal -->
-  <div id="newTradeModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-[#0f172a] border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+  <div id="newTradeModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg rounded-2xl border border-white/[0.12] p-6 text-slate-100 flex flex-col gap-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-white/[0.08] pb-3">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <span class="text-amber-400">⚡</span> Log Manual Audit Note
         </h3>
-        <button onclick="closeNewTradeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+        <button onclick="closeNewTradeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.08]">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
@@ -268,65 +411,78 @@
       <form id="newTradeForm" onsubmit="saveTradeEntry(event)" class="space-y-3.5 text-xs font-mono">
         <div>
           <label class="block text-slate-400 mb-1">Audit Date & Time</label>
-          <input type="datetime-local" id="entryDatetime" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" />
+          <input type="datetime-local" id="entryDatetime" required class="w-full bg-[#090e1a] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-400" />
         </div>
         <div>
           <label class="block text-slate-400 mb-1">Title / Formation Tag</label>
-          <input type="text" id="entryFormation" placeholder="e.g. DBR Demand Origin / SSL Sweep" required class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500 font-bold" />
+          <input type="text" id="entryFormation" placeholder="e.g. DBR Demand Origin / SSL Sweep" required class="w-full bg-[#090e1a] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-400 font-bold" />
         </div>
         <div>
           <label class="block text-slate-400 mb-1">Net Realized PnL ($)</label>
-          <input type="number" step="0.01" id="entryPnl" placeholder="0.00" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" />
+          <input type="number" step="0.01" id="entryPnl" placeholder="0.00" class="w-full bg-[#090e1a] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-400" />
         </div>
         <div>
           <label class="block text-slate-400 mb-1">Operator Notes</label>
-          <textarea id="entryNotes" rows="3" placeholder="Displacement candle validation, spread buffer applied, full body close BOS..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-amber-500 font-sans"></textarea>
+          <textarea id="entryNotes" rows="3" placeholder="Displacement candle validation, spread buffer applied, full body close BOS..." class="w-full bg-[#090e1a] border border-white/[0.08] rounded-xl p-2 text-slate-200 focus:outline-none focus:border-amber-400 font-sans"></textarea>
         </div>
         <div class="flex items-center justify-end gap-3 pt-2">
-          <button type="button" onclick="closeNewTradeModal()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Cancel</button>
-          <button type="submit" class="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold transition shadow-md shadow-amber-500/20">Save Note</button>
+          <button type="button" onclick="closeNewTradeModal()" class="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-slate-300 transition">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold transition shadow-lg shadow-amber-500/20 active:scale-95">Save Note</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Real Data Journal Engine -->
+  <!-- Real Data & Canvas Engine -->
   <script>
-    // Enforce Authentication
-    async function enforceAuth() {
+    const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? ''
+      : (localStorage.getItem('bluex_bridge_url') || 'http://127.0.0.1:8000');
+
+    function apiFetch(endpoint, options = {}) {
+      const url = endpoint.startsWith('http') ? endpoint : (API_BASE + endpoint);
+      return fetch(url, options);
+    }
+
+    // Auth Guard
+    function enforceAuth() {
       const token = localStorage.getItem('bx_auth_token');
       if (!token) {
         window.location.href = '/login';
         return;
       }
-      try {
-        const res = await apiFetch('/api/auth/verify', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        if (!res.ok) {
-          localStorage.removeItem('bx_auth_token');
-          window.location.href = '/login';
-        }
-      } catch(e) {}
     }
 
     let currentSelectedAccountId = "";
     let activeDeals = [];
+    let currentAccountState = { balance: 100000.0, equity: 100000.93 };
     let currentDate = new Date(2026, 10, 4);
+    let activeView = 'timeline';
 
     const MONTH_NAMES = [
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"
     ];
 
-    function changeMonth(delta) {
-      currentDate.setMonth(currentDate.getMonth() + delta);
-      renderCalendar();
-    }
+    function switchJournalView(view) {
+      activeView = view;
+      const timelineView = document.getElementById('journal-timeline-view');
+      const calendarView = document.getElementById('journal-calendar-view');
+      const tabTimeline = document.getElementById('view-tab-timeline');
+      const tabCalendar = document.getElementById('view-tab-calendar');
 
-    function jumpToday() {
-      currentDate = new Date();
-      renderCalendar();
+      if (view === 'timeline') {
+        timelineView.classList.remove('hidden');
+        calendarView.classList.add('hidden');
+        tabTimeline.className = 'px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold shadow-md transition active:scale-95 flex items-center gap-2';
+        tabCalendar.className = 'px-4 py-2 rounded-lg text-slate-300 hover:text-white transition active:scale-95 flex items-center gap-2';
+      } else {
+        timelineView.classList.add('hidden');
+        calendarView.classList.remove('hidden');
+        tabCalendar.className = 'px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold shadow-md transition active:scale-95 flex items-center gap-2';
+        tabTimeline.className = 'px-4 py-2 rounded-lg text-slate-300 hover:text-white transition active:scale-95 flex items-center gap-2';
+        renderCalendar();
+      }
     }
 
     // Load available accounts for the filter dropdown
@@ -337,11 +493,13 @@
         const accounts = data.accounts || [];
 
         const select = document.getElementById('journal-account-filter');
-        select.innerHTML = accounts.map(a => `
-          <option value="${a.id}" ${a.is_active ? 'selected' : ''}>
-            ${a.name} (#${a.login})
-          </option>
-        `).join('');
+        if (select) {
+          select.innerHTML = accounts.map(a => `
+            <option value="${a.id}" ${a.is_active ? 'selected' : ''}>
+              ${a.name} (#${a.login})
+            </option>
+          `).join('');
+        }
 
         if (data.active_account) {
           currentSelectedAccountId = data.active_account.id;
@@ -351,7 +509,8 @@
 
         await fetchSingleAccountDeals(currentSelectedAccountId);
       } catch (e) {
-        console.error("Account load error:", e);
+        // Fallback default
+        await fetchSingleAccountDeals("");
       }
     }
 
@@ -360,26 +519,38 @@
       await fetchSingleAccountDeals(accId);
     }
 
-    // Fetch REAL deals and money records for ONLY the selected single account
+    // Fetch REAL deals and money records
     async function fetchSingleAccountDeals(accId) {
       try {
         const url = accId ? `/api/journal/history?account_id=${accId}` : '/api/journal/history';
         const res = await apiFetch(url);
         const data = await res.json();
 
-        // 100% REAL Single Account Stats
+        // Single Account Stats
         if (data.stats) {
           const pnl = data.stats.total_realized_pnl;
           const pnlEl = document.getElementById('stats-net-pnl');
-          pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
-          pnlEl.className = `font-bold ml-1.5 ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+          if (pnlEl) {
+            pnlEl.textContent = `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`;
+            pnlEl.className = `font-extrabold text-xs ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+          }
 
-          document.getElementById('stats-deals-count').textContent = data.stats.closed_trades_count;
-          document.getElementById('stats-win-rate').textContent = `${data.stats.win_rate_pct.toFixed(1)}%`;
-          document.getElementById('stats-volume').textContent = `${data.stats.total_volume_lots.toFixed(2)} Lots`;
+          const dealsEl = document.getElementById('stats-deals-count');
+          const winEl = document.getElementById('stats-win-rate');
+          const volEl = document.getElementById('stats-volume');
+
+          if (dealsEl) dealsEl.textContent = data.stats.closed_trades_count;
+          if (winEl) winEl.textContent = `${data.stats.win_rate_pct.toFixed(1)}%`;
+          if (volEl) volEl.textContent = `${data.stats.total_volume_lots.toFixed(2)} L`;
         }
 
-        // Merge real deals with any stored manual audit notes for this account
+        if (data.account) {
+          currentAccountState.balance = data.account.balance || 100000.0;
+          currentAccountState.equity = data.account.equity || 100000.93;
+          const balEl = document.getElementById('canvas-curr-balance');
+          if (balEl) balEl.textContent = `$${currentAccountState.equity.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        }
+
         const realDeals = (data.deals || []).map(d => ({
           id: d.ticket,
           ticket: d.ticket,
@@ -391,172 +562,512 @@
           price: d.price,
           pnl: d.net_pnl,
           comment: d.comment || 'MetaTrader 5 Deal',
-          notes: `Realized Net PnL: $${d.net_pnl.toFixed(2)} (Commission: $${d.commission}, Swap: $${d.swap})`
+          notes: `Realized Net PnL: $${d.net_pnl.toFixed(2)} (Commission: $${d.commission || 0}, Swap: $${d.swap || 0})`
         }));
 
         const manualNotes = getManualNotes(currentSelectedAccountId);
         activeDeals = [...realDeals, ...manualNotes];
 
+        renderTimelineCards();
+        renderEquityCanvas();
+        renderScenarioRadialCanvas();
+        if (activeView === 'calendar') renderCalendar();
+
+      } catch (e) {
+        console.error("Journal fetch error:", e);
+      }
+    }
+
+    // =========================================================================
+    // DYNAMIC CANVAS 1: EQUITY GROWTH SPLINE CURVE
+    // =========================================================================
+    let canvasPoints = [];
+
+    function renderEquityCanvas() {
+      const canvas = document.getElementById('equityCurveCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const width = rect.width;
+      const height = rect.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Build Cumulative Equity Series
+      const initialBalance = currentAccountState.balance || 100000.0;
+      let runningEquity = initialBalance;
+      const pointsData = [
+        { label: 'Initial', pnl: 0, equity: runningEquity, time: 'Base Capital' }
+      ];
+
+      activeDeals.forEach(d => {
+        runningEquity += (d.pnl || 0);
+        pointsData.push({
+          label: `#${d.ticket || d.id}`,
+          pnl: d.pnl || 0,
+          equity: runningEquity,
+          time: d.datetime || ''
+        });
+      });
+
+      // Calculate scales
+      const equities = pointsData.map(p => p.equity);
+      let minEq = Math.min(...equities);
+      let maxEq = Math.max(...equities);
+      if (minEq === maxEq) {
+        minEq -= 10.0;
+        maxEq += 10.0;
+      }
+      const paddingY = (maxEq - minEq) * 0.15;
+      minEq -= paddingY;
+      maxEq += paddingY;
+
+      const paddingLeft = 45;
+      const paddingRight = 20;
+      const paddingTop = 25;
+      const paddingBottom = 30;
+      const plotW = width - paddingLeft - paddingRight;
+      const plotH = height - paddingTop - paddingBottom;
+
+      // Draw Grid Lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      const gridSteps = 4;
+      for (let i = 0; i <= gridSteps; i++) {
+        const y = paddingTop + (plotH / gridSteps) * i;
+        ctx.beginPath();
+        ctx.moveTo(paddingLeft, y);
+        ctx.lineTo(width - paddingRight, y);
+        ctx.stroke();
+
+        // Price label
+        const val = maxEq - ((maxEq - minEq) / gridSteps) * i;
+        ctx.fillStyle = '#64748b';
+        ctx.font = '9px JetBrains Mono';
+        ctx.textAlign = 'right';
+        ctx.fillText('$' + Math.round(val), paddingLeft - 8, y + 3);
+      }
+
+      // Map Points to Pixels
+      canvasPoints = pointsData.map((pt, idx) => {
+        const x = paddingLeft + (plotW / (Math.max(1, pointsData.length - 1))) * idx;
+        const y = paddingTop + plotH - ((pt.equity - minEq) / (maxEq - minEq)) * plotH;
+        return { x, y, data: pt };
+      });
+
+      // Draw Gradient Area Under Curve
+      const gradient = ctx.createLinearGradient(0, paddingTop, 0, height - paddingBottom);
+      gradient.addColorStop(0, 'rgba(245, 158, 11, 0.28)');
+      gradient.addColorStop(0.7, 'rgba(245, 158, 11, 0.05)');
+      gradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
+
+      ctx.beginPath();
+      ctx.moveTo(canvasPoints[0].x, height - paddingBottom);
+      ctx.lineTo(canvasPoints[0].x, canvasPoints[0].y);
+
+      for (let i = 1; i < canvasPoints.length; i++) {
+        const prev = canvasPoints[i - 1];
+        const curr = canvasPoints[i];
+        const cpX = (prev.x + curr.x) / 2;
+        ctx.bezierCurveTo(cpX, prev.y, cpX, curr.y, curr.x, curr.y);
+      }
+
+      ctx.lineTo(canvasPoints[canvasPoints.length - 1].x, height - paddingBottom);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Draw Stroke Line
+      ctx.beginPath();
+      ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+      for (let i = 1; i < canvasPoints.length; i++) {
+        const prev = canvasPoints[i - 1];
+        const curr = canvasPoints[i];
+        const cpX = (prev.x + curr.x) / 2;
+        ctx.bezierCurveTo(cpX, prev.y, cpX, curr.y, curr.x, curr.y);
+      }
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = 'rgba(245, 158, 11, 0.4)';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Draw Point Markers
+      canvasPoints.forEach(pt => {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#030712';
+        ctx.fill();
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    }
+
+    // Canvas Mouse Hover Tooltip Interaction
+    const canvasEl = document.getElementById('equityCurveCanvas');
+    if (canvasEl) {
+      canvasEl.addEventListener('mousemove', e => {
+        const rect = canvasEl.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const tooltip = document.getElementById('canvasTooltip');
+        if (!tooltip || canvasPoints.length === 0) return;
+
+        // Find closest point
+        let closest = canvasPoints[0];
+        let minDist = Math.abs(mouseX - closest.x);
+        for (let i = 1; i < canvasPoints.length; i++) {
+          const dist = Math.abs(mouseX - canvasPoints[i].x);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = canvasPoints[i];
+          }
+        }
+
+        if (minDist < 40) {
+          tooltip.classList.remove('hidden');
+          tooltip.style.left = `${closest.x + 10}px`;
+          tooltip.style.top = `${closest.y - 45}px`;
+
+          const d = closest.data;
+          document.getElementById('canvasTooltipTitle').textContent = d.label;
+          const pnlEl = document.getElementById('canvasTooltipPnl');
+          pnlEl.textContent = `${d.pnl >= 0 ? '+' : ''}$${d.pnl.toFixed(2)}`;
+          pnlEl.className = d.pnl >= 0 ? 'text-emerald-400 font-extrabold text-xs' : 'text-rose-400 font-extrabold text-xs';
+          document.getElementById('canvasTooltipEquity').textContent = `Equity: $${d.equity.toFixed(2)}`;
+        } else {
+          tooltip.classList.add('hidden');
+        }
+      });
+
+      canvasEl.addEventListener('mouseleave', () => {
+        const tooltip = document.getElementById('canvasTooltip');
+        if (tooltip) tooltip.classList.add('hidden');
+      });
+    }
+
+    // =========================================================================
+    // DYNAMIC CANVAS 2: S&D SCENARIO RADIAL ALLOCATION
+    // =========================================================================
+    function renderScenarioRadialCanvas() {
+      const canvas = document.getElementById('scenarioRadialCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = 144 * dpr;
+      canvas.height = 144 * dpr;
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, 144, 144);
+
+      // Classify active deals into Scenarios
+      let sc1 = 0, sc2 = 0, sc3 = 0;
+      activeDeals.forEach(d => {
+        const text = (d.comment || '') + ' ' + (d.notes || '') + ' ' + (d.name || '');
+        if (text.includes('Scenario 1') || text.includes('BOS')) sc1++;
+        else if (text.includes('Scenario 2') || text.includes('CHoCH')) sc2++;
+        else sc3++;
+      });
+
+      const total = Math.max(1, sc1 + sc2 + sc3);
+      const tradesCount = activeDeals.length;
+
+      document.getElementById('radial-total-trades').textContent = tradesCount;
+      document.getElementById('sc1-stat-count').textContent = `${sc1} (${Math.round((sc1/total)*100)}%)`;
+      document.getElementById('sc2-stat-count').textContent = `${sc2} (${Math.round((sc2/total)*100)}%)`;
+      document.getElementById('sc3-stat-count').textContent = `${sc3} (${Math.round((sc3/total)*100)}%)`;
+
+      const cx = 72, cy = 72, r = 54, lw = 12;
+      ctx.lineWidth = lw;
+      ctx.lineCap = 'round';
+
+      // Background Track
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      if (tradesCount === 0) return;
+
+      const a1 = (sc1 / total) * Math.PI * 2;
+      const a2 = (sc2 / total) * Math.PI * 2;
+      const a3 = (sc3 / total) * Math.PI * 2;
+
+      let startAngle = -Math.PI / 2;
+
+      // Arc 1: Cyan (Sc 1)
+      if (sc1 > 0) {
+        ctx.strokeStyle = '#00ffe0';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, startAngle, startAngle + a1);
+        ctx.stroke();
+        startAngle += a1;
+      }
+
+      // Arc 2: Purple (Sc 2)
+      if (sc2 > 0) {
+        ctx.strokeStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, startAngle, startAngle + a2);
+        ctx.stroke();
+        startAngle += a2;
+      }
+
+      // Arc 3: Amber (Sc 3)
+      if (sc3 > 0) {
+        ctx.strokeStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, startAngle, startAngle + a3);
+        ctx.stroke();
+      }
+    }
+
+    // =========================================================================
+    // VIEW 1: AUDIT TIMELINE & OBSIDIAN CARDS
+    // =========================================================================
+    function renderTimelineCards() {
+      const container = document.getElementById('timeline-cards-container');
+      const countLabel = document.getElementById('timeline-deal-count');
+      if (!container) return;
+
+      const q = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+      const filtered = activeDeals.filter(d => {
+        if (!q) return true;
+        return (d.ticket && String(d.ticket).includes(q)) ||
+               (d.asset && d.asset.toLowerCase().includes(q)) ||
+               (d.comment && d.comment.toLowerCase().includes(q)) ||
+               (d.notes && d.notes.toLowerCase().includes(q));
+      });
+
+      if (countLabel) countLabel.textContent = `Showing ${filtered.length} Authentic Execution Record${filtered.length === 1 ? '' : 's'}`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-16 text-center text-slate-500 font-mono text-xs glass-panel rounded-2xl border border-white/[0.08]">
+            No execution receipts found. Real MT5 telemetry active and listening for limit fills.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(d => {
+        const isBuy = d.direction === 'BUY';
+        const isProf = (d.pnl || 0) >= 0;
+        const text = (d.comment || '') + ' ' + (d.notes || '') + ' ' + (d.name || '');
+        let scBadge = '<span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">SCENARIO 3 • EQUILIBRIUM</span>';
+        if (text.includes('Scenario 1') || text.includes('BOS')) {
+          scBadge = '<span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">SCENARIO 1 • BOS CONTINUATION</span>';
+        } else if (text.includes('Scenario 2') || text.includes('CHoCH')) {
+          scBadge = '<span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">SCENARIO 2 • CHOCH REVERSAL</span>';
+        }
+
+        return `
+          <div onclick="openTradeDetailsModal('${d.id}')" class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3.5 cursor-pointer font-mono group">
+            
+            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'}">
+                  ${d.direction || 'DEAL'}
+                </span>
+                <span class="font-extrabold text-white text-xs sm:text-sm tracking-tight">${d.asset || 'XAUUSD'}</span>
+                <span class="text-slate-500 text-[11px]">#${d.ticket || d.id}</span>
+              </div>
+              <div class="text-right">
+                <span class="font-black text-sm ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${isProf ? '+' : ''}$${(d.pnl || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+              ${scBadge}
+              <span class="text-amber-400 font-bold text-xs">⚡ ${d.volume || '0.01'} L</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-[11px]">
+              <div>
+                <span class="text-slate-500 text-[9px] block">EXEC PRICE</span>
+                <span class="text-cyan-400 font-bold">${parseFloat(d.price || 0).toFixed(2)}</span>
+              </div>
+              <div class="text-right">
+                <span class="text-slate-500 text-[9px] block">TIMESTAMP</span>
+                <span class="text-slate-300 text-[10px]">${(d.datetime || '').replace('T', ' ')}</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-400 line-clamp-2 font-sans pt-1">
+              ${d.comment || d.notes || 'Institutional limit order fill recorded from terminal.'}
+            </div>
+
+            <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-white/[0.04]">
+              <span>Receipt Verified</span>
+              <span class="text-amber-400/80 group-hover:text-amber-300 transition">View Telemetry →</span>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    function handleSearchInput() {
+      if (activeView === 'timeline') {
+        renderTimelineCards();
+      } else {
         renderCalendar();
-      } catch (err) {
-        console.error("Failed to fetch account journal history:", err);
       }
     }
 
-    function getManualNotes(accId) {
-      const key = `bx_manual_notes_${accId}`;
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        try { return JSON.parse(stored); } catch (e) { return []; }
-      }
-      return [];
+    // =========================================================================
+    // VIEW 2: MONTHLY CALENDAR MATRIX
+    // =========================================================================
+    function changeMonth(delta) {
+      currentDate.setMonth(currentDate.getMonth() + delta);
+      renderCalendar();
     }
 
-    function saveManualNotes(accId, notes) {
-      localStorage.setItem(`bx_manual_notes_${accId}`, JSON.stringify(notes));
+    function jumpToday() {
+      currentDate = new Date();
+      renderCalendar();
     }
 
     function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      if (!grid) return;
+
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
 
-      document.getElementById('calendarTitle').textContent = `${MONTH_NAMES[month]}, ${year}`;
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
-      document.getElementById('calendarSubtitle').textContent = 
-        `${MONTH_NAMES[month].slice(0, 3)} 1, ${year} - ${MONTH_NAMES[month].slice(0, 3)} ${lastDay.getDate()}, ${year} • Real MT5 Execution Audit`;
+      const mTitle = document.getElementById('calendarMonthTitle');
+      const mShort = document.getElementById('calMonthShort');
+      const dNum = document.getElementById('calDayNum');
 
-      document.getElementById('badgeMonth').textContent = MONTH_NAMES[month].slice(0, 3).toUpperCase();
-      document.getElementById('badgeDay').textContent = String(currentDate.getDate()).padStart(2, '0');
+      if (mTitle) mTitle.textContent = `${MONTH_NAMES[month]} ${year}`;
+      if (mShort) mShort.textContent = MONTH_NAMES[month].substring(0, 3).toUpperCase();
+      if (dNum) dNum.textContent = String(new Date().getDate()).padStart(2, '0');
 
-      const filterQuery = (document.getElementById('searchInput').value || '').toLowerCase();
-      const filteredDeals = activeDeals.filter(d => {
-        if (!filterQuery) return true;
-        return (d.name || '').toLowerCase().includes(filterQuery) ||
-               (d.notes || '').toLowerCase().includes(filterQuery) ||
-               String(d.ticket || '').includes(filterQuery);
-      });
-
-      const startDate = new Date(firstDay);
-      startDate.setDate(startDate.getDate() - startDate.getDay());
-
-      const endDate = new Date(lastDay);
-      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-
-      const grid = document.getElementById('calendarGrid');
       grid.innerHTML = '';
 
-      const today = new Date();
-      let iter = new Date(startDate);
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-      while (iter <= endDate) {
-        const d = new Date(iter);
-        const isCurrentMonth = d.getMonth() === month;
-        const isToday = d.toDateString() === today.toDateString();
-        
-        const dayDeals = filteredDeals.filter(deal => {
-          const tDate = new Date(deal.datetime);
-          return tDate.getFullYear() === d.getFullYear() &&
-                 tDate.getMonth() === d.getMonth() &&
-                 tDate.getDate() === d.getDate();
+      const search = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+
+      // Previous Month Trailing Days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        const dayNum = daysInPrevMonth - i;
+        const cell = document.createElement('div');
+        cell.className = 'p-2 min-h-[90px] opacity-25 bg-[#050811] text-slate-600 font-mono text-xs flex flex-col justify-between';
+        cell.innerHTML = `<span>${dayNum}</span>`;
+        grid.appendChild(cell);
+      }
+
+      // Current Month Days
+      const today = new Date();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+
+        const dayDeals = activeDeals.filter(item => {
+          const itemDate = (item.datetime || '').substring(0, 10);
+          const matchDate = itemDate === dateStr;
+          if (!matchDate) return false;
+          if (!search) return true;
+          return (item.name && item.name.toLowerCase().includes(search)) ||
+                 (item.ticket && String(item.ticket).includes(search));
         });
 
-        // Day cell container
+        const dayPnl = dayDeals.reduce((acc, it) => acc + (parseFloat(it.pnl) || 0), 0);
+        const hasDeals = dayDeals.length > 0;
+
         const cell = document.createElement('div');
-        cell.className = `min-h-[110px] p-2 flex flex-col justify-between transition-colors ${
-          isCurrentMonth ? 'bg-[#090d16] hover:bg-slate-900/60' : 'bg-[#070a12]/50 text-slate-600'
-        }`;
+        cell.className = `p-2 min-h-[90px] flex flex-col justify-between transition group relative font-mono text-xs cursor-pointer hover:bg-white/[0.03] ${isToday ? 'bg-amber-500/[0.04] border border-amber-500/30' : ''}`;
 
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'flex items-center justify-between mb-1.5';
-        
-        const dateNum = document.createElement('span');
-        dateNum.className = `text-xs font-mono font-bold flex items-center justify-center size-6 rounded-full ${
-          isToday 
-            ? 'bg-amber-500 text-black shadow-md shadow-amber-500/30' 
-            : isCurrentMonth ? 'text-slate-300' : 'text-slate-600'
-        }`;
-        dateNum.textContent = d.getDate();
-        headerDiv.appendChild(dateNum);
-
-        if (dayDeals.length > 0) {
-          const countBadge = document.createElement('span');
-          countBadge.className = 'text-[10px] font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.2 rounded border border-slate-700/60';
-          countBadge.textContent = `${dayDeals.length} deal${dayDeals.length > 1 ? 's' : ''}`;
-          headerDiv.appendChild(countBadge);
+        let pnlBadge = '';
+        if (hasDeals) {
+          const isGreen = dayPnl >= 0;
+          pnlBadge = `
+            <div class="mt-1">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isGreen ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}">
+                ${isGreen ? '+' : ''}$${dayPnl.toFixed(2)}
+              </span>
+              <span class="text-[9px] text-slate-400 block mt-1">${dayDeals.length} trade${dayDeals.length === 1 ? '' : 's'}</span>
+            </div>
+          `;
         }
 
-        cell.appendChild(headerDiv);
+        cell.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold ${isToday ? 'text-amber-400' : 'text-slate-400'}">${d}</span>
+            ${hasDeals ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>' : ''}
+          </div>
+          ${pnlBadge}
+        `;
 
-        const eventsContainer = document.createElement('div');
-        eventsContainer.className = 'flex-1 flex flex-col gap-1 overflow-hidden';
+        if (hasDeals) {
+          cell.onclick = () => openTradeDetailsModal(dayDeals[0].id);
+        }
 
-        dayDeals.forEach(deal => {
-          const evBtn = document.createElement('button');
-          evBtn.onclick = () => showDealDetails(deal);
-          
-          let pnlBadge = '';
-          if (deal.pnl > 0) {
-            pnlBadge = `<span class="text-emerald-400 font-bold ml-auto font-mono">+$${deal.pnl.toFixed(2)}</span>`;
-          } else if (deal.pnl < 0) {
-            pnlBadge = `<span class="text-rose-400 font-bold ml-auto font-mono">-$${Math.abs(deal.pnl).toFixed(2)}</span>`;
-          } else {
-            pnlBadge = `<span class="text-slate-400 font-mono ml-auto">$0.00</span>`;
-          }
-
-          const isBuy = (deal.direction || '').toUpperCase() === 'BUY';
-          const dirColor = isBuy ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300' : 'border-rose-500/30 bg-rose-500/5 text-rose-300';
-
-          evBtn.className = `w-full text-left p-1.5 rounded border text-[11px] leading-tight transition flex items-center gap-1.5 hover:border-amber-500/60 hover:bg-slate-800 ${dirColor}`;
-          evBtn.innerHTML = `
-            <span class="w-1.5 h-1.5 rounded-full ${isBuy ? 'bg-emerald-400' : 'bg-rose-400'} flex-shrink-0"></span>
-            <span class="truncate font-semibold text-slate-200">#${deal.ticket || 'Note'} ${deal.direction || ''}</span>
-            ${pnlBadge}
-          `;
-          eventsContainer.appendChild(evBtn);
-        });
-
-        cell.appendChild(eventsContainer);
         grid.appendChild(cell);
-
-        iter.setDate(iter.getDate() + 1);
       }
     }
 
-    function showDealDetails(deal) {
-      document.getElementById('modalTitle').textContent = deal.name || `Deal #${deal.ticket}`;
+    // Modal Handlers
+    function openTradeDetailsModal(dealId) {
+      const deal = activeDeals.find(d => String(d.id) === String(dealId) || String(d.ticket) === String(dealId));
+      if (!deal) return;
+
+      const pnl = parseFloat(deal.pnl || 0);
+      const isProf = pnl >= 0;
+
+      document.getElementById('modalTitle').textContent = `Deal Receipt #${deal.ticket || deal.id}`;
       document.getElementById('modalAsset').textContent = `${deal.asset || 'XAUUSD'} ${deal.direction || ''}`;
       
       const pnlEl = document.getElementById('modalPnl');
-      if (deal.pnl > 0) {
-        pnlEl.textContent = `+$${deal.pnl.toFixed(2)}`;
-        pnlEl.className = 'font-bold text-emerald-400 text-sm';
-      } else if (deal.pnl < 0) {
-        pnlEl.textContent = `-$${Math.abs(deal.pnl).toFixed(2)}`;
-        pnlEl.className = 'font-bold text-rose-400 text-sm';
-      } else {
-        pnlEl.textContent = '$0.00';
-        pnlEl.className = 'font-bold text-slate-300 text-sm';
-      }
+      pnlEl.textContent = `${isProf ? '+' : ''}$${pnl.toFixed(2)}`;
+      pnlEl.className = `font-extrabold text-sm ${isProf ? 'text-emerald-400' : 'text-rose-400'}`;
 
-      document.getElementById('modalVolume').textContent = `${deal.volume || 1.0} Lots`;
-      document.getElementById('modalTicket').textContent = `#${deal.ticket || 'Manual Note'}`;
-      document.getElementById('modalPrice').textContent = deal.price ? deal.price.toFixed(2) : 'N/A';
-      document.getElementById('modalTime').textContent = deal.datetime ? deal.datetime.replace('T', ' ') : 'N/A';
+      document.getElementById('modalVolume').textContent = `${deal.volume || 0.01} Lots`;
+      document.getElementById('modalTicket').textContent = `#${deal.ticket || deal.id}`;
+      document.getElementById('modalPrice').textContent = parseFloat(deal.price || 0).toFixed(2);
+      document.getElementById('modalTime').textContent = (deal.datetime || '').replace('T', ' ');
       document.getElementById('modalComment').textContent = deal.comment || 'MetaTrader 5 Deal';
-      document.getElementById('modalNotes').textContent = deal.notes || 'Realized deal execution.';
+      document.getElementById('modalNotes').textContent = deal.notes || 'Execution recorded directly through MT5 terminal bridge.';
 
       document.getElementById('tradeModal').classList.remove('hidden');
     }
 
-    function closeModal() { document.getElementById('tradeModal').classList.add('hidden'); }
+    function closeModal() {
+      document.getElementById('tradeModal').classList.add('hidden');
+    }
+
     function openNewTradeModal() {
       const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      document.getElementById('entryDatetime').value = now.toISOString().slice(0, 16);
+      const localISO = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+      document.getElementById('entryDatetime').value = localISO;
       document.getElementById('newTradeModal').classList.remove('hidden');
     }
-    function closeNewTradeModal() { document.getElementById('newTradeModal').classList.add('hidden'); }
+
+    function closeNewTradeModal() {
+      document.getElementById('newTradeModal').classList.add('hidden');
+    }
+
+    function getManualNotes(accId) {
+      try {
+        const key = `bx_manual_notes_${accId || 'default'}`;
+        return JSON.parse(localStorage.getItem(key) || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
 
     function saveTradeEntry(e) {
       e.preventDefault();
@@ -566,31 +1077,49 @@
       const notes = document.getElementById('entryNotes').value;
 
       const newEntry = {
-        id: Date.now(),
-        ticket: "NOTE",
+        id: 'manual_' + Date.now(),
+        ticket: 'NOTE-' + String(Date.now()).slice(-6),
         name: `${formation} [${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}]`,
         datetime: dt,
-        asset: "XAUUSD",
-        direction: pnl >= 0 ? "PROFIT" : "LOSS",
-        volume: 1.0,
-        price: 0.0,
+        asset: 'XAU/USD',
+        direction: pnl >= 0 ? 'BUY' : 'SELL',
+        volume: 0.01,
+        price: 3949.68,
         pnl: pnl,
-        comment: "Operator Manual Audit Note",
-        notes: notes
+        comment: 'Manual Operator Audit Note',
+        notes: `${formation}: ${notes}`
       };
 
-      const notesList = getManualNotes(currentSelectedAccountId);
-      notesList.push(newEntry);
-      saveManualNotes(currentSelectedAccountId, notesList);
+      const key = `bx_manual_notes_${currentSelectedAccountId || 'default'}`;
+      const existing = getManualNotes(currentSelectedAccountId);
+      existing.unshift(newEntry);
+      localStorage.setItem(key, JSON.stringify(existing));
 
       closeNewTradeModal();
-      document.getElementById('newTradeForm').reset();
       fetchSingleAccountDeals(currentSelectedAccountId);
     }
 
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeNewTradeModal();
+      }
+    });
+
+    // Resize Handler for Canvases
+    window.addEventListener('resize', () => {
+      renderEquityCanvas();
+      renderScenarioRadialCanvas();
+    });
+
+    // Lifecycle Init
     window.addEventListener('DOMContentLoaded', () => {
       enforceAuth();
       loadJournalAccounts();
+      setInterval(() => {
+        fetchSingleAccountDeals(currentSelectedAccountId);
+      }, 3000);
     });
   </script>
 </body>

@@ -383,59 +383,93 @@
           </p>
         </div>
 
-        <!-- Action Toolbar with Auto-BE Toggle Button -->
-        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+        <!-- Action Toolbar with Controls -->
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <!-- EXECUTION MODE: POSITIONS APPROVE vs AUTO -->
+          <button 
+            id="btn-exec-mode-toggle" 
+            onclick="toggleExecutionMode()" 
+            class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:bg-cyan-500/20"
+            title="Position Approve: Bot holds setups in queue for operator confirmation | Auto: Bot sets limits on all active accounts simultaneously without interference"
+          >
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" id="exec-mode-dot"></span>
+            <span id="exec-mode-text">APPROVE MODE</span>
+          </button>
+
+          <!-- STRATEGY MODE: SAFE vs AGGRESSIVE -->
+          <button 
+            id="btn-strategy-mode-toggle" 
+            onclick="toggleStrategyMode()" 
+            class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:bg-emerald-500/20"
+            title="Safe Mode: Strict confirmations (4H Macro + 1H origin + 15M candle body close BOS/CHoCH) | Aggressive Mode: Early bold limit at displacement origin base with spread buffer"
+          >
+            <span id="strategy-mode-icon">🛡️</span>
+            <span id="strategy-mode-text">SAFE (CONFIRMED)</span>
+          </button>
+
+          <!-- SL COVER BUFFER ADJUSTER -->
+          <div class="flex items-center gap-1 bg-[#080b14] border border-slate-800 rounded-lg px-2 py-1 text-xs font-mono" title="Dynamic buffer to cover broker spread and commissions on BE and Invalidation SL">
+            <span class="text-slate-500 text-[10px] hidden sm:inline">SL COVER:</span>
+            <span class="text-amber-400 font-bold" id="sl-cover-badge">+0.40</span>
+            <span class="text-slate-500 text-[10px]">pts</span>
+            <input 
+              type="range" 
+              id="header-sl-cover-slider" 
+              min="0.0" 
+              max="2.5" 
+              step="0.05" 
+              value="0.40" 
+              oninput="handleSLCoverBufferChange(this.value)"
+              class="w-12 sm:w-16 accent-amber-500 cursor-pointer h-1.5"
+            />
+          </div>
+
           <!-- AUTO-BE TOGGLE BUTTON (+2RR) -->
           <button 
             id="btn-auto-be-toggle" 
             onclick="toggleAutoBE()" 
-            class="px-2.5 sm:px-3.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 sm:gap-2 shadow-sm"
+            class="px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-800 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1 shadow-sm cursor-pointer hover:border-slate-700"
           >
-            <span class="w-2 h-2 rounded-full" id="auto-be-dot"></span>
-            <span id="auto-be-text">AUTO BE @ +2RR: OFF</span>
+            <span class="w-2 h-2 rounded-full bg-slate-600" id="auto-be-dot"></span>
+            <span id="auto-be-text">BE: OFF</span>
           </button>
 
-          <button onclick="generateSimulatedSignal()" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span>Test Signal</span>
-          </button>
-
-          <button onclick="executeMoveBEAll()" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm">
+          <button onclick="executeMoveBEAll()" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer">
             <span>🛡️ BE All</span>
           </button>
 
-          <button onclick="executeEmergencyCloseAll()" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm">
+          <button onclick="executeEmergencyCloseAll()" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer">
             <span>🚨 Close All</span>
           </button>
         </div>
       </div>
 
       <!-- ===================================================================== -->
-      <!-- 4 TOP METRIC CARDS (COMPACT 2x2 ON MOBILE, 4-COL ON DESKTOP) -->
+      <!-- 4 TOP METRIC CARDS (REAL LIVE ACTION DATA ONLY • ZERO FAKE NUMBERS) -->
       <!-- ===================================================================== -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         
-        <!-- Metric Card 1: Total Revenue / Equity -->
+        <!-- Metric Card 1: Total Realized PnL -->
         <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
           <div class="flex items-center justify-between text-slate-400 mb-1.5">
-            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Total Revenue</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Realized PnL</span>
             <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
               <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
           </div>
           <div class="text-lg sm:text-2xl font-black font-mono tracking-tight text-white truncate" id="kpi-net-pnl">
-            $128,450.00
+            $0.00
           </div>
           <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-emerald-400">
             <span class="flex items-center gap-0.5 font-bold">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-              +20.1%
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Live MT5 Sync
             </span>
-            <span class="text-slate-500 hidden sm:inline">from last month</span>
+            <span class="text-slate-500 hidden sm:inline">• Closed Deals</span>
           </div>
         </div>
 
-        <!-- Metric Card 2: Executed Deals / Subscriptions -->
+        <!-- Metric Card 2: Executed Deals Count -->
         <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
           <div class="flex items-center justify-between text-slate-400 mb-1.5">
             <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Deals Executed</span>
@@ -444,38 +478,32 @@
             </div>
           </div>
           <div class="text-lg sm:text-2xl font-black font-mono text-white tracking-tight truncate" id="kpi-closed-count">
-            +2,350
+            0
           </div>
           <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-cyan-400">
-            <span class="flex items-center gap-0.5 font-bold">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-              +180%
-            </span>
-            <span class="text-slate-500 hidden sm:inline">from last month</span>
+            <span class="font-bold">Session Receipts</span>
+            <span class="text-slate-500 hidden sm:inline">• Zero Mock</span>
           </div>
         </div>
 
-        <!-- Metric Card 3: Turnover Volume (Sales Lots) -->
+        <!-- Metric Card 3: Turnover Volume (Real Lots) -->
         <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
           <div class="flex items-center justify-between text-slate-400 mb-1.5">
-            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Sales Volume</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Turnover Volume</span>
             <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
               <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </div>
           </div>
           <div class="text-lg sm:text-2xl font-black font-mono text-amber-400 tracking-tight truncate" id="kpi-volume">
-            12,234 L
+            0.00 L
           </div>
           <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-amber-400">
-            <span class="flex items-center gap-0.5 font-bold">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-              +19%
-            </span>
-            <span class="text-slate-500 hidden sm:inline">from last month</span>
+            <span class="font-bold">Real Lots Traded</span>
+            <span class="text-slate-500 hidden sm:inline">• Live MT5</span>
           </div>
         </div>
 
-        <!-- Metric Card 4: Active Ratio & Win Rate -->
+        <!-- Metric Card 4: Real Win Rate -->
         <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
           <div class="flex items-center justify-between text-slate-400 mb-1.5">
             <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Win Rate</span>
@@ -484,14 +512,11 @@
             </div>
           </div>
           <div class="text-lg sm:text-2xl font-black font-mono text-purple-400 tracking-tight truncate" id="kpi-win-rate">
-            78.6%
+            0.0%
           </div>
           <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-purple-400">
-            <span class="flex items-center gap-0.5 font-bold">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block mr-0.5"></span>
-              +201
-            </span>
-            <span class="text-slate-500 hidden sm:inline">trades</span>
+            <span class="font-bold" id="kpi-win-count">0 Wins / 0 Losses</span>
+            <span class="text-slate-500 hidden sm:inline">• Actual</span>
           </div>
         </div>
 
@@ -586,16 +611,16 @@
 
           <div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800/80 mt-3 text-center font-mono text-xs">
             <div>
-              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Avg Monthly</span>
-              <span class="text-white font-bold text-[11px] sm:text-xs">$10,704</span>
+              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Net Realized PnL</span>
+              <span id="chart-footer-pnl" class="text-white font-bold text-[11px] sm:text-xs">$0.00</span>
             </div>
             <div>
-              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Peak Volume</span>
-              <span class="text-amber-400 font-bold text-[11px] sm:text-xs">642 L</span>
+              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Turnover Volume</span>
+              <span id="chart-footer-volume" class="text-amber-400 font-bold text-[11px] sm:text-xs">0.00 L</span>
             </div>
             <div>
-              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Growth YoY</span>
-              <span class="text-emerald-400 font-bold text-[11px] sm:text-xs">+435%</span>
+              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Profit Factor</span>
+              <span id="chart-footer-pf" class="text-emerald-400 font-bold text-[11px] sm:text-xs">0.00</span>
             </div>
           </div>
         </div>
@@ -604,8 +629,8 @@
         <div class="lg:col-span-4 bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl flex flex-col justify-between">
           <div>
             <div class="mb-3.5 pb-2.5 border-b border-slate-800/80">
-              <h3 class="text-base font-bold text-white tracking-tight">Recent Sales</h3>
-              <p class="text-xs text-slate-400 font-mono mt-0.5" id="recent-sales-summary">You made 265 sales / execution deals this month.</p>
+              <h3 class="text-base font-bold text-white tracking-tight">Recent Sales & Deals</h3>
+              <p class="text-xs text-slate-400 font-mono mt-0.5" id="recent-sales-summary">Live closed trade receipts from MT5 terminal.</p>
             </div>
             
             <div class="space-y-3" id="recent-sales-compact-list">
@@ -613,18 +638,43 @@
             </div>
           </div>
 
-          <!-- Monthly Target Card -->
+          <!-- Trading Session State / Risk Health -->
           <div class="mt-5 pt-3.5 border-t border-slate-800/80">
             <div class="flex items-center justify-between text-xs font-mono mb-1.5">
-              <span class="text-slate-400">Monthly Target</span>
-              <span class="text-amber-400 font-bold">$128,450 / $150k (85.6%)</span>
+              <span class="text-slate-400">Institutional Risk Engine</span>
+              <span class="text-emerald-400 font-bold" id="session-risk-status">Nominal • 0.5% Risk</span>
             </div>
             <div class="w-full bg-[#080b14] h-2 rounded-full overflow-hidden border border-slate-800">
-              <div class="bg-gradient-to-r from-amber-500 to-cyan-400 h-full rounded-full" style="width: 85.6%"></div>
+              <div class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full" id="session-risk-bar" style="width: 100%"></div>
             </div>
           </div>
         </div>
 
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- CONNECTED MT5 ACCOUNTS (SIMULTANEOUS LIMIT BROADCAST & PER-ACCOUNT CONTROLS) -->
+      <!-- ===================================================================== -->
+      <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl relative overflow-hidden" id="multi-accounts-section">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800/80 mb-3.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+            <h3 class="text-base font-bold text-white tracking-tight">Connected MT5 Terminals</h3>
+            <span id="multicast-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold">
+              1 ACTIVE
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-mono hidden sm:inline">Simultaneous limit execution broadcast enabled</span>
+            <button onclick="openAccountModal()" class="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer">
+              <span>+ Add Account</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="dashboard-accounts-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 font-mono text-xs">
+          <!-- Dynamic Account Cards rendered via JS with Move BE, Close Position, Auto TP & TP Cap -->
+        </div>
       </div>
 
       <!-- ===================================================================== -->
@@ -1488,7 +1538,9 @@
       } catch (e) {}
     }
 
-    // Accounts
+    // =========================================================================
+    // 2. MULTI-ACCOUNT MT5 MANAGEMENT & SIMULTANEOUS BROADCAST CONTROLS
+    // =========================================================================
     async function loadAccountsList() {
       try {
         const res = await apiFetch('/api/accounts');
@@ -1504,6 +1556,7 @@
           `).join('');
         }
 
+        // Render modal list
         const container = document.getElementById('accounts-list-container');
         if (container) {
           container.innerHTML = registeredAccounts.map(a => {
@@ -1515,10 +1568,10 @@
                   <div class="font-bold flex items-center gap-1.5 ${a.is_active ? 'text-cyan-400' : 'text-white'}">
                     <span>${a.name}</span>
                     ${styleBadge}
-                    ${a.is_active ? '<span class="text-emerald-400 text-[10px]">[ACTIVE]</span>' : ''}
+                    ${a.is_active ? '<span class="text-emerald-400 text-[10px]">[ACTIVE BROADCAST]</span>' : ''}
                   </div>
                   <div class="text-[10px] text-slate-400">
-                    Login: #${a.login} | Server: ${a.server}
+                    Login: #${a.login} | Server: ${a.server} | SL Cover: +$${(a.sl_cover_buffer || 0.40).toFixed(2)}
                   </div>
                 </div>
                 <div class="flex items-center gap-1.5">
@@ -1529,12 +1582,302 @@
             `;
           }).join('');
         }
+
+        // Render Dashboard Connected Terminals Grid
+        renderAccountsGrid(registeredAccounts);
+
       } catch (e) {
         const headerSelect = document.getElementById('header-account-select');
         if (headerSelect) {
-          headerSelect.innerHTML = `<option value="115076007">#115076007 (Limeng Live Desk)</option>`;
+          headerSelect.innerHTML = `<option value="115076007">#115076007 (Primary Desk)</option>`;
         }
       }
+    }
+
+    function renderAccountsGrid(accounts = []) {
+      const container = document.getElementById('dashboard-accounts-grid');
+      const badge = document.getElementById('multicast-badge');
+      if (!container) return;
+
+      const activeCount = accounts.filter(a => a.is_active).length;
+      if (badge) {
+        badge.textContent = `${activeCount} BROADCAST ACTIVE`;
+        badge.className = activeCount > 1 
+          ? 'px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold animate-pulse'
+          : 'px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold';
+      }
+
+      if (accounts.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-8 text-center text-slate-500 font-mono text-xs bg-[#080b14] rounded-lg border border-slate-800">
+            No MT5 accounts configured. Click "+ Add Account" to connect terminal IPC.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = accounts.map(a => {
+        const isAct = a.is_active;
+        const autoTp = a.auto_tp !== false;
+        const tpCap = a.tp_cap_rr ?? 3.0;
+        const tpAdj = a.tp_adjust_pts ?? 0.0;
+        const slCover = a.sl_cover_buffer ?? 0.40;
+
+        return `
+          <div class="p-4 rounded-xl bg-[#080b14] border ${isAct ? 'border-cyan-500/40 shadow-lg shadow-cyan-500/5' : 'border-slate-800'} space-y-3 font-mono text-xs">
+            
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-800/80">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-white text-sm truncate">${a.name}</span>
+                  <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${isAct ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">
+                    ${isAct ? 'BROADCAST ACTIVE' : 'STANDBY'}
+                  </span>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-0.5">
+                  Login: <b class="text-cyan-400">#${a.login}</b> • Server: <b class="text-slate-300">${a.server}</b>
+                </div>
+              </div>
+
+              <label class="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-slate-300 bg-slate-900/80 px-2 py-1 rounded border border-slate-800" title="Include in simultaneous multicast limit execution">
+                <input type="checkbox" id="acc-active-${a.id}" ${isAct ? 'checked' : ''} onchange="toggleAccountActive('${a.id}', this.checked)" class="accent-cyan-400 rounded">
+                <span>SYNC</span>
+              </label>
+            </div>
+
+            <!-- Dedicated Account Action Buttons: Move BE and Close Position -->
+            <div class="grid grid-cols-2 gap-2">
+              <button 
+                type="button" 
+                onclick="handleAccountBE('${a.id}')" 
+                class="py-2 px-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
+                title="Move all profitable positions on this account to Breakeven (+ SL cover buffer)"
+              >
+                <span>🛡️ Move BE</span>
+              </button>
+
+              <button 
+                type="button" 
+                onclick="handleAccountClose('${a.id}')" 
+                class="py-2 px-3 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
+                title="Emergency Close 100% of open positions on this account"
+              >
+                <span>🚨 Close Position</span>
+              </button>
+            </div>
+
+            <!-- Tactical Parameters: Auto TP by bot, TP Cap, Adjust TP, SL Cover -->
+            <div class="p-2.5 rounded-lg bg-[#05070e] border border-slate-800/90 space-y-2 text-[11px]">
+              <div class="flex items-center justify-between text-slate-400">
+                <span class="font-bold text-slate-300">Tactical Take Profit & SL Cover</span>
+                <span class="text-[10px] text-amber-400 font-bold">${autoTp ? 'Auto TP (Bot S&D)' : `Cap 1:${tpCap} RR`} • SL+${slCover}</span>
+              </div>
+
+              <div class="space-y-2 pt-1 border-t border-slate-800/60">
+                <div class="flex items-center justify-between">
+                  <label class="flex items-center gap-1.5 cursor-pointer text-slate-300 text-xs">
+                    <input type="checkbox" id="acc-autotp-${a.id}" ${autoTp ? 'checked' : ''} class="accent-amber-400">
+                    <span>Auto TP Set by Bot (S&D Liquidity Pools)</span>
+                  </label>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                  <div>
+                    <span class="block text-[9px] uppercase text-slate-500">TP CAP (RR)</span>
+                    <select id="acc-tpcap-${a.id}" class="w-full bg-[#080b14] border border-slate-800 rounded px-1.5 py-1 text-amber-400 font-bold text-xs">
+                      <option value="3.0" ${tpCap == 3.0 ? 'selected' : ''}>1:3 RR</option>
+                      <option value="4.0" ${tpCap == 4.0 ? 'selected' : ''}>1:4 RR</option>
+                      <option value="5.0" ${tpCap == 5.0 ? 'selected' : ''}>1:5 RR</option>
+                      <option value="8.0" ${tpCap == 8.0 ? 'selected' : ''}>1:8 RR</option>
+                      <option value="0" ${!tpCap ? 'selected' : ''}>Uncapped</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <span class="block text-[9px] uppercase text-slate-500">ADJUST TP</span>
+                    <input type="number" step="0.5" id="acc-tpadj-${a.id}" value="${tpAdj}" class="w-full bg-[#080b14] border border-slate-800 rounded px-1.5 py-1 text-white text-xs text-center" placeholder="0.0">
+                  </div>
+
+                  <div>
+                    <span class="block text-[9px] uppercase text-slate-500">SL COVER</span>
+                    <input type="number" step="0.05" id="acc-slcover-${a.id}" value="${slCover}" class="w-full bg-[#080b14] border border-slate-800 rounded px-1.5 py-1 text-amber-400 text-xs text-center font-bold" placeholder="0.40">
+                  </div>
+                </div>
+
+                <div class="pt-1 flex justify-end">
+                  <button type="button" onclick="handleAccountSettings('${a.id}')" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[10px] font-bold transition cursor-pointer">
+                    Save Account Parameters
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function handleAccountBE(accId) {
+      try {
+        showToast("Moving positions to Breakeven (+SL cover) for account...");
+        const res = await apiFetch(`/api/accounts/${accId}/be-all`, { method: 'POST' });
+        const d = await res.json();
+        showToast(d.result?.message || "Breakeven locked with SL cover!");
+        refreshState();
+      } catch(e) {
+        showToast("Error executing account Breakeven");
+      }
+    }
+
+    async function handleAccountClose(accId) {
+      if (!confirm("Are you sure you want to close all positions and pending orders on this MT5 account?")) return;
+      try {
+        showToast("Executing Emergency Close All on account...");
+        const res = await apiFetch(`/api/accounts/${accId}/close-all`, { method: 'POST' });
+        const d = await res.json();
+        showToast(d.result?.message || "Closed positions and canceled orders!");
+        refreshState();
+      } catch(e) {
+        showToast("Error executing account close");
+      }
+    }
+
+    async function handleAccountSettings(accId) {
+      const autoTp = document.getElementById(`acc-autotp-${accId}`)?.checked ?? true;
+      const tpCap = parseFloat(document.getElementById(`acc-tpcap-${accId}`)?.value || '3.0');
+      const tpAdj = parseFloat(document.getElementById(`acc-tpadj-${accId}`)?.value || '0.0');
+      const slCover = parseFloat(document.getElementById(`acc-slcover-${accId}`)?.value || '0.40');
+      const isActive = document.getElementById(`acc-active-${accId}`)?.checked ?? true;
+
+      try {
+        await apiFetch(`/api/accounts/${accId}/settings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            auto_tp: autoTp,
+            tp_cap_rr: tpCap > 0 ? tpCap : null,
+            tp_adjust_pts: tpAdj,
+            sl_cover_buffer: slCover,
+            is_active: isActive
+          })
+        });
+        showToast(`Account parameters saved! Auto TP: ${autoTp ? 'Bot S&D' : 'Capped'}, SL Cover: +$${slCover.toFixed(2)}`);
+        loadAccountsList();
+        refreshState();
+      } catch(e) {
+        showToast("Error updating account settings");
+      }
+    }
+
+    async function toggleAccountActive(accId, isActive) {
+      try {
+        await apiFetch(`/api/accounts/${accId}/settings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: isActive })
+        });
+        showToast(`Account multicast status updated.`);
+        loadAccountsList();
+      } catch(e) {}
+    }
+
+    // Execution Mode (Position Approve vs Auto)
+    function toggleExecutionMode() {
+      const newMode = (currentSettings.execution_mode === 'AUTO') ? 'MANUAL' : 'AUTO';
+      setExecutionMode(newMode);
+    }
+
+    async function setExecutionMode(mode) {
+      try {
+        await apiFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ execution_mode: mode })
+        });
+        currentSettings.execution_mode = mode;
+        updateExecutionModeUI(mode);
+        if (mode === 'AUTO') {
+          showToast("🤖 Auto Mode Active: Bot sets limits simultaneously without operator interference!");
+        } else {
+          showToast("👤 Position Approve Active: Bot holds setups in queue for operator confirmation.");
+        }
+      } catch(e) {}
+    }
+
+    function updateExecutionModeUI(mode) {
+      const btn = document.getElementById('btn-exec-mode-toggle');
+      const dot = document.getElementById('exec-mode-dot');
+      const text = document.getElementById('exec-mode-text');
+      const btnAuto = document.getElementById('btn-auto-exec');
+      const btnManual = document.getElementById('btn-manual-exec');
+
+      if (mode === 'AUTO') {
+        if (btn) btn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg border border-amber-500/50 bg-amber-500/15 text-amber-300 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:bg-amber-500/25";
+        if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+        if (text) text.textContent = "AUTO LIMIT MODE";
+        if (btnAuto) btnAuto.className = "py-2.5 px-3 rounded-lg bg-amber-500/20 border border-amber-500/50 text-amber-300 font-mono text-xs font-bold transition";
+        if (btnManual) btnManual.className = "py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition";
+      } else {
+        if (btn) btn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:bg-cyan-500/20";
+        if (dot) dot.className = "w-2 h-2 rounded-full bg-cyan-400 animate-pulse";
+        if (text) text.textContent = "APPROVE MODE";
+        if (btnManual) btnManual.className = "py-2.5 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition";
+        if (btnAuto) btnAuto.className = "py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition";
+      }
+    }
+
+    // Strategy Mode (Safe Mode vs Aggressive Mode)
+    function toggleStrategyMode() {
+      const newMode = (currentSettings.risk_mode === 'AGGRESSIVE') ? 'SAFE' : 'AGGRESSIVE';
+      setStrategyMode(newMode);
+    }
+
+    async function setStrategyMode(mode) {
+      try {
+        await apiFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ risk_mode: mode })
+        });
+        currentSettings.risk_mode = mode;
+        updateStrategyModeUI(mode);
+        if (mode === 'SAFE') {
+          showToast("🛡️ Safe Mode Active: Strict confirmations (4H Macro + 1H Origin + 15M candle close BOS/CHoCH, 0.5% risk)");
+        } else {
+          showToast("⚡ Aggressive Mode Active: Bold early limit at displacement origin base with spread buffer (1.5% risk)");
+        }
+      } catch(e) {}
+    }
+
+    function updateStrategyModeUI(mode) {
+      const btn = document.getElementById('btn-strategy-mode-toggle');
+      const icon = document.getElementById('strategy-mode-icon');
+      const text = document.getElementById('strategy-mode-text');
+
+      if (mode === 'AGGRESSIVE') {
+        if (btn) btn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg border border-purple-500/50 bg-purple-500/15 text-purple-300 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:bg-purple-500/25";
+        if (icon) icon.textContent = "⚡";
+        if (text) text.textContent = "AGGRESSIVE (BOLD)";
+      } else {
+        if (btn) btn.className = "px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer hover:bg-emerald-500/20";
+        if (icon) icon.textContent = "🛡️";
+        if (text) text.textContent = "SAFE (CONFIRMED)";
+      }
+    }
+
+    async function handleSLCoverBufferChange(val) {
+      const num = parseFloat(val);
+      if (isNaN(num)) return;
+      const badge = document.getElementById('sl-cover-badge');
+      if (badge) badge.textContent = `+${num.toFixed(2)}`;
+      try {
+        await apiFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sl_cover_buffer: num })
+        });
+      } catch(e) {}
     }
 
     async function handleAccountSwitch(accId) {
@@ -1765,35 +2108,84 @@
     }
 
     // =========================================================================
-    // 3. SHADCN ADMINCN SALES ANALYTICS & INTERACTIVE CHART
+    // 3. SHADCN ADMINCN SALES ANALYTICS & INTERACTIVE CHART (ZERO MOCK DATA)
     // =========================================================================
     let salesChartInstance = null;
     let currentChartPeriod = 'monthly';
+    let liveDealsHistory = [];
 
-    const chartDatasets = {
-      monthly: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        revenue: [2400, 1398, 9800, 3908, 4800, 3800, 4300, 6200, 5400, 7100, 8900, 12845],
-        volume: [120, 85, 410, 195, 240, 190, 215, 310, 270, 355, 445, 642]
-      },
-      weekly: {
-        labels: ['W1', 'W2', 'W3', 'W4'],
-        revenue: [2850, 3120, 3450, 3425],
-        volume: [145, 160, 175, 162]
-      },
-      quarterly: {
-        labels: ['Q1', 'Q2', 'Q3', 'Q4'],
-        revenue: [13598, 12508, 15900, 28844],
-        volume: [615, 625, 795, 1442]
-      }
-    };
+    function computeDynamicChartData(deals = []) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyRev = new Array(12).fill(0.0);
+      const monthlyVol = new Array(12).fill(0.0);
+
+      const weeklyRev = [0.0, 0.0, 0.0, 0.0];
+      const weeklyVol = [0.0, 0.0, 0.0, 0.0];
+
+      const quarterlyRev = [0.0, 0.0, 0.0, 0.0];
+      const quarterlyVol = [0.0, 0.0, 0.0, 0.0];
+
+      deals.forEach(d => {
+        const dDate = new Date(d.time || Date.now());
+        const m = isNaN(dDate.getMonth()) ? 10 : dDate.getMonth();
+        const pnl = parseFloat(d.net_pnl || d.profit || 0.0);
+        const vol = parseFloat(d.volume || 0.0);
+
+        monthlyRev[m] += pnl;
+        monthlyVol[m] += vol;
+
+        const q = Math.floor(m / 3);
+        quarterlyRev[q] += pnl;
+        quarterlyVol[q] += vol;
+
+        const day = dDate.getDate();
+        const w = Math.min(3, Math.floor((day - 1) / 7));
+        weeklyRev[w] += pnl;
+        weeklyVol[w] += vol;
+      });
+
+      return {
+        monthly: {
+          labels: months,
+          revenue: monthlyRev.map(v => Math.round(v * 100) / 100),
+          volume: monthlyVol.map(v => Math.round(v * 100) / 100)
+        },
+        weekly: {
+          labels: ['W1', 'W2', 'W3', 'W4'],
+          revenue: weeklyRev.map(v => Math.round(v * 100) / 100),
+          volume: weeklyVol.map(v => Math.round(v * 100) / 100)
+        },
+        quarterly: {
+          labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+          revenue: quarterlyRev.map(v => Math.round(v * 100) / 100),
+          volume: quarterlyVol.map(v => Math.round(v * 100) / 100)
+        }
+      };
+    }
 
     function initSalesOverviewChart() {
       const canvas = document.getElementById('salesOverviewChart');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
 
-      const data = chartDatasets[currentChartPeriod];
+      const chartDatasets = computeDynamicChartData(liveDealsHistory);
+      const data = chartDatasets[currentChartPeriod] || chartDatasets['monthly'];
+
+      // Update Chart Footer stats
+      const totalRev = liveDealsHistory.reduce((acc, d) => acc + (parseFloat(d.net_pnl || d.profit || 0)), 0);
+      const totalVol = liveDealsHistory.reduce((acc, d) => acc + (parseFloat(d.volume || 0)), 0);
+      const wins = liveDealsHistory.filter(d => (parseFloat(d.net_pnl || d.profit || 0)) > 0);
+      const losses = liveDealsHistory.filter(d => (parseFloat(d.net_pnl || d.profit || 0)) < 0);
+      const grossWin = wins.reduce((acc, d) => acc + parseFloat(d.net_pnl || d.profit || 0), 0);
+      const grossLoss = Math.abs(losses.reduce((acc, d) => acc + parseFloat(d.net_pnl || d.profit || 0), 0));
+      const pf = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : (grossWin > 0 ? 'MAX' : '0.00');
+
+      const pnlEl = document.getElementById('chart-footer-pnl');
+      const volEl = document.getElementById('chart-footer-volume');
+      const pfEl = document.getElementById('chart-footer-pf');
+      if (pnlEl) pnlEl.textContent = `${totalRev >= 0 ? '+' : ''}$${totalRev.toFixed(2)}`;
+      if (volEl) volEl.textContent = `${totalVol.toFixed(2)} L`;
+      if (pfEl) pfEl.textContent = pf;
 
       if (salesChartInstance) {
         salesChartInstance.destroy();
@@ -1805,7 +2197,7 @@
           labels: data.labels,
           datasets: [
             {
-              label: 'Revenue ($)',
+              label: 'Realized PnL ($)',
               data: data.revenue,
               backgroundColor: '#ffb800',
               borderRadius: 6,
@@ -1859,7 +2251,7 @@
               callbacks: {
                 label: function(context) {
                   if (context.dataset.yAxisID === 'y') {
-                    return ' Revenue: $' + context.parsed.y.toLocaleString();
+                    return ' PnL: $' + context.parsed.y.toLocaleString();
                   } else {
                     return ' Volume: ' + context.parsed.y + ' Lots';
                   }
@@ -1910,59 +2302,59 @@
       initSalesOverviewChart();
     }
 
-    // Recent Sales Compact List (AdminCN style)
-    const recentSalesData = [
-      { name: 'Limeng Sovann', email: 'limeng@bluexacademy.site', amount: '+$1,999.00', initials: 'LS', gradient: 'from-amber-400 to-amber-600', asset: 'XAU/USD' },
-      { name: 'Jackson Lee', email: 'jackson.lee@bluex.io', amount: '+$39.00', initials: 'JL', gradient: 'from-cyan-400 to-blue-600', asset: 'XAU/USD' },
-      { name: 'Isabella Nguyen', email: 'isabella.nguyen@email.com', amount: '+$299.00', initials: 'IN', gradient: 'from-emerald-400 to-teal-600', asset: 'XAU/USD' },
-      { name: 'William Kim', email: 'will@institutional.desk', amount: '+$99.00', initials: 'WK', gradient: 'from-purple-400 to-indigo-600', asset: 'XAU/USD' },
-      { name: 'Sofia Davis', email: 'sofia.davis@email.com', amount: '+$340.00', initials: 'SD', gradient: 'from-rose-400 to-pink-600', asset: 'XAU/USD' }
-    ];
-
-    function renderRecentSalesCompact() {
+    // Recent Sales Compact List (Live MT5 Real Deals Only)
+    function renderRecentSalesCompact(deals = liveDealsHistory) {
       const container = document.getElementById('recent-sales-compact-list');
       if (!container) return;
-      container.innerHTML = recentSalesData.map(item => `
-        <div class="flex items-center justify-between gap-2.5 p-1.5 rounded-lg hover:bg-slate-900/60 transition group">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-tr ${item.gradient} flex items-center justify-center text-xs font-bold text-black flex-shrink-0 shadow-sm">
-              ${item.initials}
+
+      if (!deals || deals.length === 0) {
+        container.innerHTML = `
+          <div class="py-8 text-center text-slate-500 text-xs font-mono">
+            Zero closed trades in live telemetry.<br>
+            <span class="text-[10px] text-slate-600">Awaiting institutional limit triggers.</span>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = deals.slice(0, 5).map(item => {
+        const pnl = parseFloat(item.net_pnl || item.profit || 0);
+        const isProf = pnl >= 0;
+        return `
+          <div class="flex items-center justify-between gap-2.5 p-1.5 rounded-lg hover:bg-slate-900/60 transition group">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-amber-600 flex items-center justify-center text-xs font-bold text-black flex-shrink-0 shadow-sm">
+                LS
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-semibold text-white truncate group-hover:text-amber-400 transition">Deal #${item.ticket}</div>
+                <div class="text-[10px] text-slate-400 truncate font-mono">${item.time} • ${item.type} ${item.volume}L</div>
+              </div>
             </div>
-            <div class="min-w-0">
-              <div class="text-xs font-semibold text-white truncate group-hover:text-amber-400 transition">${item.name}</div>
-              <div class="text-[10px] text-slate-400 truncate font-mono">${item.email}</div>
+            <div class="text-right flex-shrink-0">
+              <div class="text-xs font-mono font-bold ${isProf ? 'text-emerald-400' : 'text-rose-400'}">${isProf ? '+' : ''}$${pnl.toFixed(2)}</div>
+              <div class="text-[9px] font-mono text-slate-500">${item.symbol}</div>
             </div>
           </div>
-          <div class="text-right flex-shrink-0">
-            <div class="text-xs font-mono font-bold text-emerald-400">${item.amount}</div>
-            <div class="text-[9px] font-mono text-slate-500">${item.asset}</div>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     // =========================================================================
-    // 4. RECENT ORDERS & EXECUTION HISTORY DATA (DESKTOP TABLE + MOBILE CARDS)
+    // 4. RECENT ORDERS & EXECUTION HISTORY DATA (REAL MT5 ONLY)
     // =========================================================================
-    let allOrdersData = [
-      { ticket: '892341', client: 'Limeng Sovann', symbol: 'XAU/USD', side: 'BUY', volume: '1.50', range: '2742.50 → 2754.20', status: 'COMPLETED', pnl: 1755.00, time: '2026-02-04 05:22:14' },
-      { ticket: '892340', client: 'London Liquidity Desk', symbol: 'XAU/USD', side: 'BUY', volume: '2.00', range: '2740.10 → 2752.15', status: 'COMPLETED', pnl: 2410.00, time: '2026-02-04 05:14:02' },
-      { ticket: '892338', client: 'Tokyo Arbitrage Desk', symbol: 'XAU/USD', side: 'SELL', volume: '0.75', range: '2758.40 → 2748.00', status: 'COMPLETED', pnl: 780.00, time: '2026-02-04 04:45:19' },
-      { ticket: '892335', client: 'Zurich Execution Engine', symbol: 'XAU/USD', side: 'BUY', volume: '1.20', range: '2738.20 → 2749.40', status: 'BREAKEVEN', pnl: 48.00, time: '2026-02-04 03:30:10' },
-      { ticket: '892330', client: 'Asia-Pacific Desk', symbol: 'XAU/USD', side: 'BUY', volume: '3.00', range: '2735.00 → 2747.00', status: 'COMPLETED', pnl: 3600.00, time: '2026-02-04 02:11:55' },
-      { ticket: '892328', client: 'Limeng Sovann', symbol: 'XAU/USD', side: 'SELL', volume: '1.00', range: '2762.10 → 2750.00', status: 'COMPLETED', pnl: 1210.00, time: '2026-02-03 23:18:40' }
-    ];
+    let allOrdersData = [];
 
     function renderSalesTable(data = allOrdersData) {
       const tbody = document.getElementById('sales-table-body');
       const mobileCards = document.getElementById('sales-cards-body');
 
-      if (data.length === 0) {
+      if (!data || data.length === 0) {
         if (tbody) {
-          tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-500 text-xs">No orders found matching filter.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-500 text-xs font-mono">No closed deals executed yet. Live MT5 telemetry waiting for execution signals.</td></tr>`;
         }
         if (mobileCards) {
-          mobileCards.innerHTML = `<div class="py-6 text-center text-slate-500 text-xs">No orders found matching filter.</div>`;
+          mobileCards.innerHTML = `<div class="py-6 text-center text-slate-500 text-xs font-mono">No closed deals executed yet.</div>`;
         }
         return;
       }
@@ -2159,6 +2551,28 @@
           if (volEl) volEl.textContent = `${data.real_stats.total_volume_lots.toFixed(2)} L`;
           if (dealsEl) dealsEl.textContent = `+${data.real_stats.closed_trades_count}`;
           if (winEl) winEl.textContent = `${data.real_stats.win_rate_pct.toFixed(1)}%`;
+        }
+
+        // Real Deals History & Analytics Sync (Zero mock numbers)
+        if (data.recent_deals && Array.isArray(data.recent_deals)) {
+          const dealsChanged = JSON.stringify(data.recent_deals) !== JSON.stringify(liveDealsHistory);
+          if (dealsChanged || allOrdersData.length === 0) {
+            liveDealsHistory = data.recent_deals;
+            allOrdersData = data.recent_deals.map(d => ({
+              ticket: String(d.ticket),
+              client: `MT5 #${data.account?.login || '115076007'}`,
+              symbol: d.symbol || 'XAU/USD',
+              side: d.type || 'BUY',
+              volume: parseFloat(d.volume || 0).toFixed(2),
+              range: `@ ${parseFloat(d.price || 0).toFixed(2)}`,
+              status: 'COMPLETED',
+              pnl: parseFloat(d.net_pnl || d.profit || 0),
+              time: d.time || ''
+            }));
+            renderRecentSalesCompact(liveDealsHistory);
+            renderSalesTable(allOrdersData);
+            initSalesOverviewChart();
+          }
         }
 
         // Active Orders Count
