@@ -24,6 +24,7 @@ class MT5AccountModel(BaseModel):
     server: str                         # Broker server name e.g. "MetaQuotes-Demo", "ICMarketsSC-Live"
     path: Optional[str] = r"C:\Program Files\MetaTrader 5\terminal64.exe"
     is_active: bool = True
+    trade_style: str = "DAY_TRADE"      # "DAY_TRADE" (Intraday M1-M15) or "SWING_TRADE" (Macro H1-H4)
     auto_tp: bool = True                # Bot-decided Take Profit using S&D
     tp_cap_rr: Optional[float] = 3.0    # Optional TP Cap (Max RR ratio)
     tp_adjust_pts: float = 0.0          # Manual TP adjustment offset in points
@@ -43,6 +44,9 @@ class AccountManager:
                 # Ensure all accounts have default per-account fields
                 modified = False
                 for acc in self.accounts:
+                    if "trade_style" not in acc:
+                        acc["trade_style"] = "DAY_TRADE"
+                        modified = True
                     if "auto_tp" not in acc:
                         acc["auto_tp"] = True
                         modified = True
@@ -71,6 +75,7 @@ class AccountManager:
                 "server": "MetaQuotes-Demo",
                 "path": r"C:\Program Files\MetaTrader 5\terminal64.exe",
                 "is_active": True,
+                "trade_style": "DAY_TRADE",
                 "auto_tp": True,
                 "tp_cap_rr": 3.0,
                 "tp_adjust_pts": 0.0,
@@ -170,6 +175,9 @@ class AccountManager:
             acc["name"] = settings["name"]
         if "is_active" in settings:
             acc["is_active"] = bool(settings["is_active"])
+        if "trade_style" in settings:
+            style = str(settings["trade_style"]).upper()
+            acc["trade_style"] = "SWING_TRADE" if "SWING" in style else "DAY_TRADE"
         if "auto_tp" in settings:
             acc["auto_tp"] = bool(settings["auto_tp"])
         if "tp_cap_rr" in settings:

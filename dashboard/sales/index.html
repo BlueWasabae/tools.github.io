@@ -186,7 +186,8 @@
             <span class="ml-auto px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/20 text-amber-300 font-bold">PRO</span>
           </a>
 
-          <a href="/journal" target="_blank" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <!-- Trading Journal Link -->
+          <a href="/journal/" target="_blank" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <span>Trading Journal</span>
             <span class="ml-auto text-slate-500 text-[10px]">↗</span>
@@ -345,7 +346,7 @@
         </div>
 
         <!-- Journal Button -->
-        <a href="/journal" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+        <a href="/journal/" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span class="hidden sm:inline">Journal</span>
         </a>
@@ -1618,8 +1619,9 @@
 
       container.innerHTML = accounts.map(a => {
         const isAct = a.is_active;
+        const isSwing = a.trade_style === 'SWING_TRADE';
         const autoTp = a.auto_tp !== false;
-        const tpCap = a.tp_cap_rr ?? 3.0;
+        const tpCap = a.tp_cap_rr ?? (isSwing ? 5.0 : 3.0);
         const tpAdj = a.tp_adjust_pts ?? 0.0;
         const slCover = a.sl_cover_buffer ?? 0.40;
 
@@ -1631,8 +1633,11 @@
               <div class="min-w-0">
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-white text-sm truncate">${a.name}</span>
-                  <span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${isAct ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">
-                    ${isAct ? 'BROADCAST ACTIVE' : 'STANDBY'}
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isSwing ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'}">
+                    ${isSwing ? 'SWING TRADE' : 'DAY TRADE'}
+                  </span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isAct ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">
+                    ${isAct ? 'ACTIVE' : 'STANDBY'}
                   </span>
                 </div>
                 <div class="text-[11px] text-slate-400 mt-0.5">
@@ -1644,6 +1649,29 @@
                 <input type="checkbox" id="acc-active-${a.id}" ${isAct ? 'checked' : ''} onchange="toggleAccountActive('${a.id}', this.checked)" class="accent-cyan-400 rounded">
                 <span>SYNC</span>
               </label>
+            </div>
+
+            <!-- Trade Style Selector (Day Trade vs Swing Trade) for THIS Account -->
+            <div class="flex items-center justify-between p-2 rounded-lg bg-[#0c101d] border border-slate-800/80">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Trading Style:</span>
+              <div class="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-0.5 text-[10px]">
+                <button 
+                  type="button" 
+                  onclick="setAccountTradeStyle('${a.id}', 'DAY_TRADE')" 
+                  class="px-2.5 py-1 rounded font-bold transition cursor-pointer ${!isSwing ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm' : 'text-slate-400 hover:text-white'}"
+                  title="Day Trade Mode: Intraday setups (M1-M15), 1:3 RR targeting internal swing liquidity"
+                >
+                  ⚡ Day Trade
+                </button>
+                <button 
+                  type="button" 
+                  onclick="setAccountTradeStyle('${a.id}', 'SWING_TRADE')" 
+                  class="px-2.5 py-1 rounded font-bold transition cursor-pointer ${isSwing ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm' : 'text-slate-400 hover:text-white'}"
+                  title="Swing Trade Mode: Macro setups (H1-H4), 1:5+ RR targeting macro external liquidity pools"
+                >
+                  🌊 Swing Trade
+                </button>
+              </div>
             </div>
 
             <!-- Dedicated Account Action Buttons: Move BE and Close Position -->
@@ -1716,6 +1744,23 @@
           </div>
         `;
       }).join('');
+    }
+
+    async function setAccountTradeStyle(accId, style) {
+      try {
+        const styleName = style === 'SWING_TRADE' ? 'Swing Trade' : 'Day Trade';
+        showToast(`Updating account #${accId} to ${styleName}...`);
+        const res = await apiFetch(`/api/accounts/${accId}/settings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trade_style: style })
+        });
+        const d = await res.json();
+        showToast(`Account #${accId} set to ${styleName}!`);
+        loadAccountsList();
+      } catch (e) {
+        showToast("Error updating account trade style");
+      }
     }
 
     async function handleAccountBE(accId) {

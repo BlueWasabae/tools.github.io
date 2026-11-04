@@ -197,12 +197,21 @@ async def serve_login():
         return FileResponse(login_path)
     return {"message": "Login portal initialized. Place login.html in static/"}
 
-@app.get("/journal")
+@app.api_route("/journal", methods=["GET", "HEAD"])
+@app.api_route("/journal/", methods=["GET", "HEAD"])
+@app.api_route("/journal.html", methods=["GET", "HEAD"])
+@app.api_route("/journal/index.html", methods=["GET", "HEAD"])
 async def serve_journal():
     """Serves the institutional trading journal calendar."""
-    journal_path = os.path.join(STATIC_DIR, "journal.html")
-    if os.path.exists(journal_path):
-        return FileResponse(journal_path)
+    candidates = [
+        os.path.join(STATIC_DIR, "journal.html"),
+        os.path.join(STATIC_DIR, "journal", "index.html"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "journal.html"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "journal", "index.html"),
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return FileResponse(p)
     return {"message": "Trading Journal calendar initialized."}
 
 # ==============================================================================
@@ -351,6 +360,7 @@ async def delete_account(acc_id: str):
 class AccountSettingsRequest(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    trade_style: Optional[str] = None
     auto_tp: Optional[bool] = None
     tp_cap_rr: Optional[float] = None
     tp_adjust_pts: Optional[float] = None
@@ -526,12 +536,19 @@ def execute_multicast_signal(exec_alert: AlertPayload, scenario_id: int = 1) -> 
             acc_alert = AlertPayload(**exec_alert.dict())
 
             auto_tp = acc.get("auto_tp", True)
+            trade_style = acc.get("trade_style", "DAY_TRADE")
             tp_cap = acc.get("tp_cap_rr")
             tp_adjust = acc.get("tp_adjust_pts", 0.0)
             risk_delta = max(0.50, abs(acc_alert.entry - acc_alert.sl))
 
+            # Apply account-specific Day vs Swing Trade parameters
             if auto_tp:
                 bot_tp = calculate_bot_tp(acc_alert.symbol, acc_alert.action, acc_alert.entry, acc_alert.sl, scenario_id)
+                # For Swing Trade accounts, expand target towards macro liquidity pool if uncapped
+                if trade_style == "SWING_TRADE" and (not tp_cap or tp_cap < 4.0):
+                    swing_tp_dist = risk_delta * 5.0
+                    bot_tp = round(acc_alert.entry + swing_tp_dist if "BUY" in acc_alert.action.upper() else acc_alert.entry - swing_tp_dist, 2)
+
                 if tp_cap and tp_cap > 0:
                     capped_dist = risk_delta * tp_cap
                     if "BUY" in acc_alert.action.upper():
@@ -541,7 +558,8 @@ def execute_multicast_signal(exec_alert: AlertPayload, scenario_id: int = 1) -> 
                 else:
                     acc_alert.tp1 = bot_tp
             else:
-                rr = tp_cap if (tp_cap and tp_cap > 0) else cockpit_state.get("target_rr", 3.0)
+                default_target = 5.0 if trade_style == "SWING_TRADE" else cockpit_state.get("target_rr", 3.0)
+                rr = tp_cap if (tp_cap and tp_cap > 0) else default_target
                 if "BUY" in acc_alert.action.upper():
                     acc_alert.tp1 = round(acc_alert.entry + (risk_delta * rr), 2)
                 else:
@@ -554,7 +572,8 @@ def execute_multicast_signal(exec_alert: AlertPayload, scenario_id: int = 1) -> 
                     acc_alert.tp1 = round(acc_alert.tp1 - tp_adjust, 2)
 
             sl_cover = acc.get("sl_cover_buffer", cockpit_state.get("spread_buffer_usd", 0.40))
-            acc_alert.comment = f"BlueX [{acc.get('name')[:8]}] SL+{sl_cover:.2f}"
+            style_tag = "SWING" if trade_style == "SWING_TRADE" else "DAY"
+            acc_alert.comment = f"BlueX [{style_tag}] SL+{sl_cover:.2f}"
 
             res = mt5_engine.execute_alert(acc_alert)
             results.append({
