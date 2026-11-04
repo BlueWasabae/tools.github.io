@@ -13,8 +13,10 @@ indicator("BlueX SMC Genesis Institutional Engine [XAU/USD]",
 string G_MODE     = "Operational Hierarchy & Timeframe Architecture"
 string i_mode     = input.string("Day Trade (M15 / M3)", "Trading Hierarchy", 
                      options=["Day Trade (M15 / M3)", "Swing Trade (H4 / H1 / M15)"], group=G_MODE)
-int    i_pivotLen = input.int(5, "Swing Pivot Strength (V-Shape Wing Length)", minval=2, maxval=20, group=G_MODE,
-                     tooltip="Number of bars required on each side to confirm symmetrical V-shape curve origin.")
+int    i_swingLen = input.int(5, "Swing Pivot Strength (V-Shape Curve Wing Length)", minval=2, maxval=20, group=G_MODE,
+                     tooltip="Number of bars required on each side to confirm symmetrical V-shape major swing origin.")
+int    i_intLen   = input.int(3, "Internal Pivot Strength (iBOS Wing Length)", minval=1, maxval=10, group=G_MODE,
+                     tooltip="Number of bars required on each side to confirm internal structure swings.")
 string i_zoneCandleModel = input.string("Full Candle Range (High to Low)", "S&D Zone Candle Model",
                      options=["Full Candle Range (High to Low)", "Candle Body (Body to Wick)"], group=G_MODE,
                      tooltip="Lowest candle for Demand, highest candle for Supply at curve displacement origin.")
@@ -24,10 +26,16 @@ string i_labelMode= input.string("Institutional (EST / MTF / LTF / FT)", "Label 
                      options=["Institutional (EST / MTF / LTF / FT)", "SMC Genesis (BOS / iBOS / FT)"], group=G_VIS)
 bool   i_showEST  = input.bool(true, "Show Dealing Range (EST.H / EST.L)", group=G_VIS,
                      tooltip="External Structure Range. Automatically removes old EST when a new BOS confirms.")
-bool   i_showBOS  = input.bool(true, "Show Break of Structure (BOS)", group=G_VIS,
-                     tooltip="White horizontal line across broken swing curve with centered yellow label.")
+bool   i_showBOS  = input.bool(true, "Show Major Structure Breaks (BOS)", group=G_VIS,
+                     tooltip="Solid white line across broken swing curve with centered yellow label.")
+bool   i_showInt  = input.bool(true, "Show Internal Structure Breaks (iBOS / MTF / LTF)", group=G_VIS)
+bool   i_showFT   = input.bool(true, "Show Fractal Structure (FT / FTS - M15+ Only)", group=G_VIS,
+                     tooltip="Fractal Structure (FT) micro-breaks within an iBOS move. Strictly deactivated on M3.")
 bool   i_showSD   = input.bool(true, "Show Supply & Demand Zones (Fresh Untouched Only)", group=G_VIS,
                      tooltip="Fresh zones created from curve origins. Removed immediately once touched by candle wick or body.")
+bool   i_showLiq  = input.bool(true, "Show External Liquidity Pools (BSL / SSL)", group=G_VIS,
+                     tooltip="Previous Day High (BSL) and Previous Day Low (SSL). Non-repainting.")
+bool   i_showEq   = input.bool(false, "Show Dealing Range Equilibrium (50%)", group=G_VIS)
 bool   i_showHUD  = input.bool(true, "Show Telemetry HUD Dashboard", group=G_VIS)
 int    i_maxZones = input.int(10, "Maximum Active Fresh S&D Zones", minval=2, maxval=25, group=G_VIS)
 
@@ -39,21 +47,31 @@ string G_THEME    = "Institutional Visual Palette (Dark-Mode Luxury)"
 color  c_bosLine  = input.color(color.white, "BOS Line Color (White Solid)", group=G_THEME)
 color  c_bosText  = input.color(#facc15, "BOS Text Color (Amber Gold)", group=G_THEME)
 color  c_estLine  = input.color(#ef4444, "EST Range Line Color (Solid Red)", group=G_THEME)
+color  c_ftLine   = input.color(#d97706, "FT Micro Break Line (Dark Amber)", group=G_THEME)
+color  c_intLine  = input.color(#94a3b8, "Internal Break Line (Slate)", group=G_THEME)
 color  c_zoneBg   = input.color(color.new(#18181b, 60), "Fresh Zone Fill (Dark Translucent)", group=G_THEME)
 color  c_zoneBrd  = input.color(color.new(#475569, 45), "Fresh Zone Border (Subtle Slate)", group=G_THEME)
+color  c_bsl      = input.color(#38bdf8, "Buy-Side Liquidity (BSL / PDH)", group=G_THEME)
+color  c_ssl      = input.color(#f43f5e, "Sell-Side Liquidity (SSL / PDL)", group=G_THEME)
+color  c_eqLine   = input.color(#64748b, "Equilibrium 50% Line Color", group=G_THEME)
 
 // ==============================================================================
-// 2. TIMEFRAME CLASSIFICATION & NOMENCLATURE RESOLUTION
+// 2. TIMEFRAME CLASSIFICATION & CANONICAL FT FILTER RULE
 // ==============================================================================
 bool isM3  = timeframe.isminutes and timeframe.multiplier == 3
 bool isM15 = timeframe.isminutes and timeframe.multiplier == 15
 
-// Dynamic Label Nomenclature matching user chart
-string defaultTag = isM3 ? "LTF" : isM15 ? "MTF" : "BOS"
-if i_labelMode == "SMC Genesis (BOS / iBOS / FT)"
-    defaultTag := "BOS"
+// Canonical Law: On M3 (LTF), objectives are strictly BOS and iBOS. FT is prohibited.
+bool canDrawFT = not isM3 and i_showFT
 
-string displayLabel = defaultTag
+// Dynamic Label Nomenclature matching user chart layout
+string majorTag    = isM3 ? "LTF" : isM15 ? "MTF" : "BOS"
+string internalTag = isM3 ? "LTF" : isM15 ? "MTF" : "iBOS"
+if i_labelMode == "SMC Genesis (BOS / iBOS / FT)"
+    majorTag    := "BOS"
+    internalTag := "iBOS"
+
+string ftTag        = "FT"
 string currentTfStr = timeframe.isminutes ? str.tostring(timeframe.multiplier) + "M" : timeframe.isdaily ? "D" : timeframe.period
 
 // ==============================================================================
@@ -69,16 +87,26 @@ type ZoneData
 var ZoneData[] activeZones = array.new<ZoneData>(0)
 
 // ==============================================================================
-// 4. SWING PIVOT DETECTION & UNBROKEN SWINGS STORAGE
+// 4. SWING PIVOT DETECTION & UNBROKEN SWING ARRAYS
 // ==============================================================================
-float rawPivotHigh = ta.pivothigh(high, i_pivotLen, i_pivotLen)
-float rawPivotLow  = ta.pivotlow(low, i_pivotLen, i_pivotLen)
+// Major Swings
+float rawSwingHigh = ta.pivothigh(high, i_swingLen, i_swingLen)
+float rawSwingLow  = ta.pivotlow(low, i_swingLen, i_swingLen)
 
-// Persistent arrays for tracking active unbroken swing highs & lows
-var float[] activeHighs    = array.new_float(0)
-var int[]   activeHighBars = array.new_int(0)
-var float[] activeLows     = array.new_float(0)
-var int[]   activeLowBars  = array.new_int(0)
+// Internal Swings
+float rawIntHigh   = ta.pivothigh(high, i_intLen, i_intLen)
+float rawIntLow    = ta.pivotlow(low, i_intLen, i_intLen)
+
+// Storage for active unbroken swing pivots
+var float[] swingHighs     = array.new_float(0)
+var int[]   swingHighBars  = array.new_int(0)
+var float[] swingLows      = array.new_float(0)
+var int[]   swingLowBars   = array.new_int(0)
+
+var float[] intHighs       = array.new_float(0)
+var int[]   intHighBars    = array.new_int(0)
+var float[] intLows        = array.new_float(0)
+var int[]   intLowBars     = array.new_int(0)
 
 // Dealing Range Coordinates (EST.H & EST.L)
 var float estHigh       = na
@@ -92,67 +120,96 @@ var line  estLowLine    = na
 var label estHighLbl    = na
 var label estLowLbl     = na
 
-// Trend State Tracking
+// Dealing Range Equilibrium
+var line  eqLine        = na
+var label eqLbl         = na
+
+// Trend & Structural State Tracking
 var int currentTrend = 0 // 1 = Bullish, -1 = Bearish
+var int structStage  = 0 // 0 = Major BOS, 1 = Internal iBOS, 2 = Micro FT
+var int lastBreakBar = 0
 
-// Register new confirmed symmetrical V-shape curve vertex
-if not na(rawPivotHigh)
-    int pBar = bar_index - i_pivotLen
-    array.push(activeHighs, rawPivotHigh)
-    array.push(activeHighBars, pBar)
-    if array.size(activeHighs) > 25
-        array.shift(activeHighs)
-        array.shift(activeHighBars)
+// Register confirmed symmetrical V-shape curve vertices
+if not na(rawSwingHigh)
+    int pBar = bar_index - i_swingLen
+    array.push(swingHighs, rawSwingHigh)
+    array.push(swingHighBars, pBar)
+    if array.size(swingHighs) > 25
+        array.shift(swingHighs)
+        array.shift(swingHighBars)
 
-if not na(rawPivotLow)
-    int pBar = bar_index - i_pivotLen
-    array.push(activeLows, rawPivotLow)
-    array.push(activeLowBars, pBar)
-    if array.size(activeLows) > 25
-        array.shift(activeLows)
-        array.shift(activeLowBars)
+if not na(rawSwingLow)
+    int pBar = bar_index - i_swingLen
+    array.push(swingLows, rawSwingLow)
+    array.push(swingLowBars, pBar)
+    if array.size(swingLows) > 25
+        array.shift(swingLows)
+        array.shift(swingLowBars)
+
+if not na(rawIntHigh)
+    int pBar = bar_index - i_intLen
+    array.push(intHighs, rawIntHigh)
+    array.push(intHighBars, pBar)
+    if array.size(intHighs) > 25
+        array.shift(intHighs)
+        array.shift(intHighBars)
+
+if not na(rawIntLow)
+    int pBar = bar_index - i_intLen
+    array.push(intLows, rawIntLow)
+    array.push(intLowBars, pBar)
+    if array.size(intLows) > 25
+        array.shift(intLows)
+        array.shift(intLowBars)
 
 // ==============================================================================
-// 5. MECHANICAL BOS DETECTION & ZONE GENERATION ENGINE
+// 5. MECHANICAL BOS / iBOS / FT DETECTION & ZONE ENGINE
 // ==============================================================================
 bool isConfirmed = barstate.isconfirmed
 
-bool isBullBreak = false
-bool isBearBreak = false
+bool isBullBreak  = false
+bool isBearBreak  = false
+string breakEvent = ""
+string dispTag    = ""
+
 var float activeZoneTop = na
 var float activeZoneBot = na
 
 if isConfirmed
     // --------------------------------------------------------------------------
-    // BULLISH BREAK: Full Candle-Body Close Above Active Swing Highs
+    // A. MAJOR BULLISH STRUCTURE BREAK (BOS)
     // --------------------------------------------------------------------------
-    if array.size(activeHighs) > 0
-        int hIdx = array.size(activeHighs) - 1
-        while hIdx >= 0
-            float hPrice = array.get(activeHighs, hIdx)
-            int   hBar   = array.get(activeHighBars, hIdx)
+    if array.size(swingHighs) > 0
+        int sIdx = array.size(swingHighs) - 1
+        while sIdx >= 0
+            float sPrice = array.get(swingHighs, sIdx)
+            int   sBar   = array.get(swingHighBars, sIdx)
 
-            if close > hPrice
+            if close > sPrice
                 isBullBreak  := true
+                breakEvent   := "EST"
+                dispTag      := majorTag
                 currentTrend := 1
+                structStage  := 1
+                lastBreakBar := bar_index
 
                 // 1. Draw BOS Line (White Solid Line with Centered Yellow Text)
                 if i_showBOS
-                    int midX = int(math.round((hBar + bar_index) / 2))
-                    line.new(x1=hBar, y1=hPrice, x2=bar_index, y2=hPrice, 
+                    int midX = int(math.round((sBar + bar_index) / 2))
+                    line.new(x1=sBar, y1=sPrice, x2=bar_index, y2=sPrice, 
                              color=c_bosLine, style=line.style_solid, width=1)
-                    label.new(x=midX, y=hPrice, text=displayLabel, 
+                    label.new(x=midX, y=sPrice, text=dispTag, 
                               style=label.style_none, textcolor=c_bosText, size=size.small)
 
-                // 2. Locate Curve Origin Low (the lowest candle between hBar and bar_index)
-                int lowestCandleBar = hBar
-                int initOff = math.min(math.max(0, bar_index - hBar), 499)
+                // 2. Locate Curve Origin Low (the lowest candle between sBar and bar_index)
+                int lowestCandleBar = sBar
+                int initOff = math.min(math.max(0, bar_index - sBar), 499)
                 float minLowPrice = low[initOff]
                 float candH = high[initOff]
                 float candO = open[initOff]
                 float candC = close[initOff]
 
-                for b = hBar to bar_index
+                for b = sBar to bar_index
                     int bOff = bar_index - b
                     if bOff >= 0 and bOff < 500
                         if low[bOff] < minLowPrice
@@ -162,7 +219,7 @@ if isConfirmed
                             candO           := open[bOff]
                             candC           := close[bOff]
 
-                // 3. EST Replacement Rule: Remove old EST lines and draw new active EST
+                // 3. EST Replacement Rule: Remove old EST and draw new active EST
                 // Rule: "remove old EST if new Bos appear and draw a new one"
                 if i_showEST
                     line.delete(estHighLine)
@@ -170,7 +227,7 @@ if isConfirmed
                     label.delete(estHighLbl)
                     label.delete(estLowLbl)
 
-                    // Draw solid red line at EST.L (the curve base low)
+                    // Draw solid red line at EST.L (curve origin low)
                     estLow      := minLowPrice
                     estLowBar   := lowestCandleBar
                     estLowLine  := line.new(x1=lowestCandleBar, y1=estLow, x2=bar_index + 25, y2=estLow, 
@@ -178,7 +235,7 @@ if isConfirmed
                     estLowLbl   := label.new(x=bar_index + 25, y=estLow, text="EST.L", 
                                              style=label.style_none, textcolor=c_estLine, size=size.tiny)
 
-                    // Initialize dynamic EST.H at the current impulse high
+                    // Initialize dynamic EST.H at current impulse high
                     estHigh     := high
                     estHighBar  := bar_index
                     estHighLine := line.new(x1=bar_index, y1=estHigh, x2=bar_index + 25, y2=estHigh, 
@@ -200,7 +257,7 @@ if isConfirmed
 
                     box demandBox = box.new(left=lowestCandleBar, top=dTop, right=bar_index + 20, bottom=dBot,
                                             bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid,
-                                            text=displayLabel, text_size=size.small, text_color=c_bosText)
+                                            text=dispTag, text_size=size.small, text_color=c_bosText)
 
                     if array.size(activeZones) >= i_maxZones
                         ZoneData oldZ = array.shift(activeZones)
@@ -208,42 +265,46 @@ if isConfirmed
 
                     array.push(activeZones, ZoneData.new(demandBox, dTop, dBot, true, bar_index))
 
-                // Remove broken high from active tracking
-                array.remove(activeHighs, hIdx)
-                array.remove(activeHighBars, hIdx)
+                // Remove broken swing high from active list
+                array.remove(swingHighs, sIdx)
+                array.remove(swingHighBars, sIdx)
 
-            hIdx -= 1
+            sIdx -= 1
 
     // --------------------------------------------------------------------------
-    // BEARISH BREAK: Full Candle-Body Close Below Active Swing Lows
+    // B. MAJOR BEARISH STRUCTURE BREAK (BOS)
     // --------------------------------------------------------------------------
-    if array.size(activeLows) > 0
-        int lIdx = array.size(activeLows) - 1
-        while lIdx >= 0
-            float lPrice = array.get(activeLows, lIdx)
-            int   lBar   = array.get(activeLowBars, lIdx)
+    if array.size(swingLows) > 0
+        int sIdx = array.size(swingLows) - 1
+        while sIdx >= 0
+            float sPrice = array.get(swingLows, sIdx)
+            int   sBar   = array.get(swingLowBars, sIdx)
 
-            if close < lPrice
+            if close < sPrice
                 isBearBreak  := true
+                breakEvent   := "EST"
+                dispTag      := majorTag
                 currentTrend := -1
+                structStage  := 1
+                lastBreakBar := bar_index
 
                 // 1. Draw BOS Line (White Solid Line with Centered Yellow Text)
                 if i_showBOS
-                    int midX = int(math.round((lBar + bar_index) / 2))
-                    line.new(x1=lBar, y1=lPrice, x2=bar_index, y2=lPrice, 
+                    int midX = int(math.round((sBar + bar_index) / 2))
+                    line.new(x1=sBar, y1=sPrice, x2=bar_index, y2=sPrice, 
                              color=c_bosLine, style=line.style_solid, width=1)
-                    label.new(x=midX, y=lPrice, text=displayLabel, 
+                    label.new(x=midX, y=sPrice, text=dispTag, 
                               style=label.style_none, textcolor=c_bosText, size=size.small)
 
-                // 2. Locate Curve Origin High (the highest candle between lBar and bar_index)
-                int highestCandleBar = lBar
-                int initOff = math.min(math.max(0, bar_index - lBar), 499)
+                // 2. Locate Curve Origin High (the highest candle between sBar and bar_index)
+                int highestCandleBar = sBar
+                int initOff = math.min(math.max(0, bar_index - sBar), 499)
                 float maxHighPrice = high[initOff]
                 float candL = low[initOff]
                 float candO = open[initOff]
                 float candC = close[initOff]
 
-                for b = lBar to bar_index
+                for b = sBar to bar_index
                     int bOff = bar_index - b
                     if bOff >= 0 and bOff < 500
                         if high[bOff] > maxHighPrice
@@ -253,7 +314,7 @@ if isConfirmed
                             candO            := open[bOff]
                             candC            := close[bOff]
 
-                // 3. EST Replacement Rule: Remove old EST lines and draw new active EST
+                // 3. EST Replacement Rule: Remove old EST and draw new active EST
                 // Rule: "remove old EST if new Bos appear and draw a new one"
                 if i_showEST
                     line.delete(estHighLine)
@@ -261,7 +322,7 @@ if isConfirmed
                     label.delete(estHighLbl)
                     label.delete(estLowLbl)
 
-                    // Draw solid red line at EST.H (the curve base high)
+                    // Draw solid red line at EST.H (curve origin high)
                     estHigh     := maxHighPrice
                     estHighBar  := highestCandleBar
                     estHighLine := line.new(x1=highestCandleBar, y1=estHigh, x2=bar_index + 25, y2=estHigh, 
@@ -269,7 +330,7 @@ if isConfirmed
                     estHighLbl  := label.new(x=bar_index + 25, y=estHigh, text="EST.H", 
                                              style=label.style_none, textcolor=c_estLine, size=size.tiny)
 
-                    // Initialize dynamic EST.L at the current impulse low
+                    // Initialize dynamic EST.L at current impulse low
                     estLow      := low
                     estLowBar   := bar_index
                     estLowLine  := line.new(x1=bar_index, y1=estLow, x2=bar_index + 25, y2=estLow, 
@@ -291,7 +352,7 @@ if isConfirmed
 
                     box supplyBox = box.new(left=highestCandleBar, top=sTop, right=bar_index + 20, bottom=sBot,
                                             bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid,
-                                            text=displayLabel, text_size=size.small, text_color=c_bosText)
+                                            text=dispTag, text_size=size.small, text_color=c_bosText)
 
                     if array.size(activeZones) >= i_maxZones
                         ZoneData oldZ = array.shift(activeZones)
@@ -299,14 +360,61 @@ if isConfirmed
 
                     array.push(activeZones, ZoneData.new(supplyBox, sTop, sBot, false, bar_index))
 
-                // Remove broken low from active tracking
-                array.remove(activeLows, lIdx)
-                array.remove(activeLowBars, lIdx)
+                // Remove broken swing low from active list
+                array.remove(swingLows, sIdx)
+                array.remove(swingLowBars, sIdx)
 
-            lIdx -= 1
+            sIdx -= 1
+
+    // --------------------------------------------------------------------------
+    // C. INTERNAL STRUCTURE BREAKS (iBOS & FT)
+    // --------------------------------------------------------------------------
+    if i_showInt and array.size(intHighs) > 0
+        int iIdx = array.size(intHighs) - 1
+        while iIdx >= 0
+            float iPrice = array.get(intHighs, iIdx)
+            int   iBar   = array.get(intHighBars, iIdx)
+
+            if close > iPrice and iBar > lastBreakBar
+                bool isFT = (structStage == 2 and canDrawFT)
+                string curTag = isFT ? ftTag : internalTag
+                color curCol  = isFT ? c_ftLine : c_intLine
+                string curSty = isFT ? line.style_dotted : line.style_solid
+
+                int midX = int(math.round((iBar + bar_index) / 2))
+                line.new(x1=iBar, y1=iPrice, x2=bar_index, y2=iPrice, color=curCol, style=curSty, width=1)
+                label.new(x=midX, y=iPrice, text=curTag, style=label.style_none, textcolor=curCol, size=size.tiny)
+
+                structStage := (isFT or not canDrawFT) ? 1 : 2
+                array.remove(intHighs, iIdx)
+                array.remove(intHighBars, iIdx)
+
+            iIdx -= 1
+
+    if i_showInt and array.size(intLows) > 0
+        int iIdx = array.size(intLows) - 1
+        while iIdx >= 0
+            float iPrice = array.get(intLows, iIdx)
+            int   iBar   = array.get(intLowBars, iIdx)
+
+            if close < iPrice and iBar > lastBreakBar
+                bool isFT = (structStage == 2 and canDrawFT)
+                string curTag = isFT ? ftTag : internalTag
+                color curCol  = isFT ? c_ftLine : c_intLine
+                string curSty = isFT ? line.style_dotted : line.style_solid
+
+                int midX = int(math.round((iBar + bar_index) / 2))
+                line.new(x1=iBar, y1=iPrice, x2=bar_index, y2=iPrice, color=curCol, style=curSty, width=1)
+                label.new(x=midX, y=iPrice, text=curTag, style=label.style_none, textcolor=curCol, size=size.tiny)
+
+                structStage := (isFT or not canDrawFT) ? 1 : 2
+                array.remove(intLows, iIdx)
+                array.remove(intLowBars, iIdx)
+
+            iIdx -= 1
 
 // ==============================================================================
-// 6. DEALING RANGE (EST) DYNAMIC EXTENSION ENGINE
+// 6. DEALING RANGE (EST) DYNAMIC EXTENSION & EQUILIBRIUM ENGINE
 // ==============================================================================
 if i_showEST
     // Dynamically expand impulse bounds while trend continues
@@ -335,6 +443,19 @@ if i_showEST
         label.set_x(estHighLbl, bar_index + 25)
     if not na(estLowLbl)
         label.set_x(estLowLbl, bar_index + 25)
+
+    // 50% Dealing Range Equilibrium
+    if i_showEq and not na(estHigh) and not na(estLow)
+        float eqLevel = math.avg(estHigh, estLow)
+        int eqStart   = math.min(nz(estHighBar, bar_index), nz(estLowBar, bar_index))
+
+        if barstate.islast
+            line.delete(eqLine)
+            label.delete(eqLbl)
+            eqLine := line.new(x1=eqStart, y1=eqLevel, x2=bar_index + 25, y2=eqLevel, 
+                               color=c_eqLine, style=line.style_dashed, width=1)
+            eqLbl  := label.new(x=bar_index + 25, y=eqLevel, text="EQ 50%", 
+                                style=label.style_none, textcolor=c_eqLine, size=size.tiny)
 
 // ==============================================================================
 // 7. S&D ZONE MITIGATION & TOUCH DELETION ENGINE
@@ -369,9 +490,37 @@ if isConfirmed and array.size(activeZones) > 0
         zIdx -= 1
 
 // ==============================================================================
-// 8. TELEMETRY HUD TABLE
+// 8. EXTERNAL LIQUIDITY POOLS (BSL / SSL - PREVIOUS DAY HIGHS & LOWS)
+// Strict Non-Repainting Mandate: lookahead = barmerge.lookahead_off
 // ==============================================================================
-var table hudTable = table.new(position.top_right, 2, 6, bgcolor=color.new(#030712, 15), border_color=color.new(#ffffff, 85), border_width=1)
+var line pdhLine = na
+var line pdlLine = na
+var label pdhLbl = na
+var label pdlLbl = na
+
+if i_showLiq and not timeframe.isdaily and not timeframe.isweekly
+    [dHigh, dLow] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_off)
+
+    if barstate.islast and not na(dHigh) and not na(dLow)
+        line.delete(pdhLine)
+        line.delete(pdlLine)
+        label.delete(pdhLbl)
+        label.delete(pdlLbl)
+
+        pdhLine := line.new(x1=bar_index - 50, y1=dHigh, x2=bar_index + 25, y2=dHigh, 
+                            color=c_bsl, style=line.style_solid, width=1)
+        pdhLbl  := label.new(x=bar_index + 25, y=dHigh, text="BSL [PDH]", 
+                             style=label.style_none, textcolor=c_bsl, size=size.tiny)
+
+        pdlLine := line.new(x1=bar_index - 50, y1=dLow, x2=bar_index + 25, y2=dLow, 
+                            color=c_ssl, style=line.style_solid, width=1)
+        pdlLbl  := label.new(x=bar_index + 25, y=dLow, text="SSL [PDL]", 
+                             style=label.style_none, textcolor=c_ssl, size=size.tiny)
+
+// ==============================================================================
+// 9. TELEMETRY HUD TABLE
+// ==============================================================================
+var table hudTable = table.new(position.top_right, 2, 7, bgcolor=color.new(#030712, 15), border_color=color.new(#ffffff, 85), border_width=1)
 
 if i_showHUD and barstate.islast
     table.cell(hudTable, 0, 0, "BlueX SMC Genesis", bgcolor=color.new(#090e1a, 0), text_color=#f59e0b, text_size=size.small)
@@ -391,11 +540,15 @@ if i_showHUD and barstate.islast
     table.cell(hudTable, 0, 4, "Active EST Low", text_color=#94a3b8, text_size=size.tiny)
     table.cell(hudTable, 1, 4, not na(estLow) ? str.tostring(estLow, "#.##") : "Searching...", text_color=#10b981, text_size=size.tiny)
 
-    table.cell(hudTable, 0, 5, "Internal Tag", text_color=#94a3b8, text_size=size.tiny)
-    table.cell(hudTable, 1, 5, displayLabel, text_color=#fbbf24, text_size=size.tiny)
+    table.cell(hudTable, 0, 5, "Timeframe Tag", text_color=#94a3b8, text_size=size.tiny)
+    table.cell(hudTable, 1, 5, majorTag, text_color=#fbbf24, text_size=size.tiny)
+
+    table.cell(hudTable, 0, 6, "FT Engine State", text_color=#94a3b8, text_size=size.tiny)
+    ftStatus = isM3 ? "DEACTIVATED (M3 Rule)" : (i_showFT ? "ACTIVE (M15+)" : "DISABLED")
+    table.cell(hudTable, 1, 6, ftStatus, text_color=isM3 ? #f59e0b : #10b981, text_size=size.tiny)
 
 // ==============================================================================
-// 9. WEBHOOK & QUANTITATIVE ALERTS DISPATCH
+// 10. WEBHOOK & QUANTITATIVE ALERTS DISPATCH
 // ==============================================================================
 if isConfirmed and (isBullBreak or isBearBreak)
     string dirStr   = isBullBreak ? "BUY_LIMIT" : "SELL_LIMIT"
@@ -404,7 +557,7 @@ if isConfirmed and (isBullBreak or isBearBreak)
     float  risk     = math.abs(entryLvl - slLvl)
     float  tp1Lvl   = isBullBreak ? entryLvl + (risk * 3.0) : entryLvl - (risk * 3.0)
 
-    string jsonMsg  = '{"secret":"' + i_secret + '","symbol":"XAUUSD","action":"' + dirStr + '","entry":' + str.tostring(entryLvl, "#.##") + ',"sl":' + str.tostring(slLvl, "#.##") + ',"tp1":' + str.tostring(tp1Lvl, "#.##") + ',"risk_pct":' + str.tostring(i_riskPct, "#.#") + ',"comment":"BlueX ' + displayLabel + ' (' + currentTfStr + ')"}'
+    string jsonMsg  = '{"secret":"' + i_secret + '","symbol":"XAUUSD","action":"' + dirStr + '","entry":' + str.tostring(entryLvl, "#.##") + ',"sl":' + str.tostring(slLvl, "#.##") + ',"tp1":' + str.tostring(tp1Lvl, "#.##") + ',"risk_pct":' + str.tostring(i_riskPct, "#.#") + ',"comment":"BlueX ' + dispTag + ' (' + currentTfStr + ')"}'
     alert(jsonMsg, alert.freq_once_per_bar_close)
 
 alertcondition(isBullBreak, title="Bullish Structure Break (BOS)", message="BlueX Bullish BOS Confirmed on Close")
