@@ -14,33 +14,38 @@ string G_MODE     = "Operational Hierarchy & Timeframe Architecture"
 string i_mode     = input.string("Day Trade (M15 / M3)", "Trading Hierarchy", 
                      options=["Day Trade (M15 / M3)", "Swing Trade (H4 / H1 / M15)"], group=G_MODE)
 int    i_pivotLen = input.int(5, "Swing Pivot Strength (V-Shape Wing Length)", minval=2, maxval=20, group=G_MODE,
-                     tooltip="Number of bars required to confirm symmetrical V-shape pivot extremes.")
+                     tooltip="Number of bars required on each side to confirm symmetrical V-shape curve origin.")
+string i_zoneCandleModel = input.string("Full Candle Range (High to Low)", "S&D Zone Candle Model",
+                     options=["Full Candle Range (High to Low)", "Candle Body (Body to Wick)"], group=G_MODE,
+                     tooltip="Lowest candle for Demand, highest candle for Supply at curve displacement origin.")
 
 string G_VIS      = "Visual Form Model & Nomenclature"
 string i_labelMode= input.string("Institutional (EST / MTF / LTF / FT)", "Label Notation Model",
                      options=["Institutional (EST / MTF / LTF / FT)", "SMC Genesis (BOS / iBOS / FT)"], group=G_VIS)
-bool   i_showEST  = input.bool(true, "Show External Structure Range (EST.H / EST.L)", group=G_VIS)
+bool   i_showEST  = input.bool(true, "Show Dealing Range (EST.H / EST.L)", group=G_VIS,
+                     tooltip="External Structure Range. Automatically removes old EST when a new BOS confirms.")
+bool   i_showBOS  = input.bool(true, "Show Break of Structure (BOS)", group=G_VIS,
+                     tooltip="White horizontal line across broken swing curve with centered yellow label.")
 bool   i_showInt  = input.bool(true, "Show Internal Structure Breaks (MTF / LTF / iBOS)", group=G_VIS)
 bool   i_showFT   = input.bool(true, "Show Fractal Structure (FT / FTS - M15+ Only)", group=G_VIS,
-                     tooltip="Fractal Structure (FT) tracks micro-breaks within an iBOS move. Strictly deactivated on M3.")
-bool   i_showSD   = input.bool(true, "Show Supply & Demand Zones (Zone Candle Model)", group=G_VIS)
-bool   i_showStem = input.bool(true, "Show EST Origin Vertical Connector Stem", group=G_VIS)
+                     tooltip="Fractal Structure (FT) micro-breaks within an iBOS move. Strictly deactivated on M3.")
+bool   i_showSD   = input.bool(true, "Show Supply & Demand Zones (Fresh Untouched Only)", group=G_VIS,
+                     tooltip="Fresh zones created from curve origins. Removed immediately once touched by candle wick or body.")
 bool   i_showHUD  = input.bool(true, "Show Telemetry HUD Dashboard", group=G_VIS)
-int    i_maxZones = input.int(10, "Maximum Active S&D Zones", minval=2, maxval=25, group=G_VIS)
+int    i_maxZones = input.int(10, "Maximum Active Fresh S&D Zones", minval=2, maxval=25, group=G_VIS)
 
 string G_ALERT    = "Execution Bridge & Webhook Gateway"
 string i_secret   = input.string("BLUEX_QUANT_SECURE_TOKEN_9981", "Webhook Secret Bearer Token", group=G_ALERT)
 float  i_riskPct  = input.float(1.0, "Account Risk %", minval=0.1, maxval=3.0, step=0.1, group=G_ALERT)
 
 string G_THEME    = "Institutional Visual Palette (Dark-Mode Luxury)"
-color  c_est      = input.color(#ef5350, "EST Range Line Color (Coral Red)", group=G_THEME)
-color  c_labelTxt = input.color(#fbbf24, "Label Text Color (Amber Gold)", group=G_THEME)
-color  c_pillBg   = input.color(color.new(#18181b, 20), "Pill Label Background", group=G_THEME)
-color  c_intLine  = input.color(#94a3b8, "Internal Break Line (Slate)", group=G_THEME)
+color  c_bosLine  = input.color(color.white, "BOS Line Color (White Solid)", group=G_THEME)
+color  c_bosText  = input.color(#facc15, "BOS Text Color (Amber Gold)", group=G_THEME)
+color  c_estLine  = input.color(#ef4444, "EST Range Line Color (Solid Red)", group=G_THEME)
+color  c_zoneBg   = input.color(color.new(#18181b, 60), "Fresh Zone Fill (Dark Translucent)", group=G_THEME)
+color  c_zoneBrd  = input.color(color.new(#475569, 45), "Fresh Zone Border (Subtle Slate)", group=G_THEME)
 color  c_ftLine   = input.color(#d97706, "FT Micro Break Line (Dark Amber)", group=G_THEME)
-color  c_demand   = input.color(#10b981, "Institutional Demand (Emerald)", group=G_THEME)
-color  c_supply   = input.color(#ef4444, "Institutional Supply (Rose)", group=G_THEME)
-color  c_dimmed   = input.color(#64748b, "Mitigated Zone Color", group=G_THEME)
+color  c_intLine  = input.color(color.white, "Internal Break Line Color", group=G_THEME)
 
 // ==============================================================================
 // 2. TIMEFRAME CLASSIFICATION & CANONICAL FT FILTER RULE
@@ -51,14 +56,15 @@ bool isM15 = timeframe.isminutes and timeframe.multiplier == 15
 // Canonical Law: On M3 (LTF), objectives are strictly BOS and iBOS. FT is prohibited.
 bool canDrawFT = not isM3 and i_showFT
 
-// Resolve dynamic tags
+// Resolve dynamic tags matching user's exact chart layout
+string defaultTag  = isM3 ? "LTF" : isM15 ? "MTF" : "BOS"
 string internalTag = isM3 ? "LTF" : isM15 ? "MTF" : "iBOS"
 if i_labelMode == "SMC Genesis (BOS / iBOS / FT)"
+    defaultTag  := "BOS"
     internalTag := "iBOS"
 
-string majorTag = i_labelMode == "Institutional (EST / MTF / LTF / FT)" ? "EST" : "BOS"
-string ftTag    = "FT"
-
+string majorTag    = i_labelMode == "Institutional (EST / MTF / LTF / FT)" ? defaultTag : "BOS"
+string ftTag       = "FT"
 string currentTfStr = timeframe.isminutes ? str.tostring(timeframe.multiplier) + "M" : timeframe.isdaily ? "D" : timeframe.period
 
 // ==============================================================================
@@ -66,12 +72,10 @@ string currentTfStr = timeframe.isminutes ? str.tostring(timeframe.multiplier) +
 // ==============================================================================
 type ZoneData
     box    bBox
-    label  bLbl
     float  topPrice
     float  botPrice
     bool   isDemand
-    bool   isActive
-    int    startBar
+    int    createdBar
 
 var ZoneData[] activeZones = array.new<ZoneData>(0)
 
@@ -87,49 +91,51 @@ var int   activeHighBar = na
 var float activeLow     = na
 var int   activeLowBar  = na
 
-// External Structure Range (Dealing Range Bounds: EST.H & EST.L)
+// Dealing Range Coordinates (EST.H & EST.L)
 var float estHigh       = na
 var int   estHighBar    = na
 var float estLow        = na
 var int   estLowBar     = na
-var int   estOriginBar  = na
 
-// Persistent visual elements for the External Structure bracket
-var line estHighLine = na
-var line estLowLine  = na
-var line estStemLine = na
-var label estHighLbl = na
-var label estLowLbl  = na
+// Active EST Visual Lines & Labels
+var line  estHighLine   = na
+var line  estLowLine    = na
+var label estHighLbl    = na
+var label estLowLbl     = na
 
-// Structural State Machine:
-// 0 = Seeking Major BOS / EST
-// 1 = Seeking Internal iBOS / MTF / LTF
-// 2 = Seeking Micro FT (Active on M15+ only)
-var int structStage  = 0
+// Trend & Structural State Tracking
 var int currentTrend = 0 // 1 = Bullish, -1 = Bearish
+var int structStage  = 0 // 0 = Seeking Major BOS / EST, 1 = Seeking Internal, 2 = Seeking Micro FT
 var int lastBreakBar = 0
 
-// Track confirmed symmetrical V-shape pivots
+// When a confirmed symmetrical V-shape curve vertex occurs:
 if not na(rawPivotHigh)
     int pBar = bar_index - i_pivotLen
     activeHigh    := rawPivotHigh
     activeHighBar := pBar
-    if na(estHigh) or rawPivotHigh > estHigh
-        estHigh    := rawPivotHigh
-        estHighBar := pBar
 
 if not na(rawPivotLow)
     int pBar = bar_index - i_pivotLen
     activeLow    := rawPivotLow
     activeLowBar := pBar
-    if na(estLow) or rawPivotLow < estLow
-        estLow    := rawPivotLow
-        estLowBar := pBar
 
 // ==============================================================================
-// 5. MECHANICAL STRUCTURE BREAK ENGINE (EST/BOS, MTF/LTF/iBOS, FT)
+// 5. HELPER FUNCTION: REMOVE OLD EST AND RESET ACTIVE RANGE
+// Rule: "remove old EST if new Bos appear and draw a new one"
 // ==============================================================================
-// Strict Non-Repainting Mandate: Body close confirmation strictly on confirmed bar
+f_deleteOldEST() =>
+    if not na(estHighLine)
+        line.delete(estHighLine)
+    if not na(estLowLine)
+        line.delete(estLowLine)
+    if not na(estHighLbl)
+        label.delete(estHighLbl)
+    if not na(estLowLbl)
+        label.delete(estLowLbl)
+
+// ==============================================================================
+// 6. MECHANICAL STRUCTURE BREAK ENGINE (BOS / iBOS / FT) & S&D CREATION
+// ==============================================================================
 bool isConfirmed = barstate.isconfirmed
 
 bool isBullBreak = false
@@ -142,7 +148,7 @@ var float activeZoneBot = na
 
 if isConfirmed
     // --------------------------------------------------------------------------
-    // BULLISH BREAK: Full Candle-Body Close Above Active Swing High
+    // BULLISH BREAK: Full Candle-Body Close Above Active Swing Curve High
     // --------------------------------------------------------------------------
     if not na(activeHigh) and not na(activeHighBar) and close > activeHigh
         isBullBreak := true
@@ -153,17 +159,35 @@ if isConfirmed
         if isExternalBreak
             breakEvent   := "EST"
             displayLabel := majorTag
-            structStage  := 1 // Progress to internal pullback watching
+            structStage  := 1 // Progress to internal watching
             currentTrend := 1
             lastBreakBar := bar_index
 
-            // Update External Structure Range Bounds
-            estHigh      := activeHigh
-            estHighBar   := activeHighBar
-            if not na(activeLow)
-                estLow       := activeLow
-                estLowBar    := activeLowBar
-                estOriginBar := activeLowBar
+            // ------------------------------------------------------------------
+            // EST REPLACEMENT RULE: Remove old EST lines and draw new active EST
+            // ------------------------------------------------------------------
+            if i_showEST
+                f_deleteOldEST()
+
+                // New EST.L established at the curve origin low
+                if not na(activeLow) and not na(activeLowBar)
+                    estLow     := activeLow
+                    estLowBar  := activeLowBar
+                    estLowLine := line.new(x1=activeLowBar, y1=estLow, x2=bar_index + 25, y2=estLow, 
+                                           color=c_estLine, style=line.style_solid, width=1)
+                    estLowLbl  := label.new(x=bar_index + 25, y=estLow, text="EST.L", 
+                                            style=label.style_label_left, color=color.new(#000000, 100), 
+                                            textcolor=c_estLine, size=size.tiny)
+
+                // New EST.H initialized at the displacement impulse high
+                estHigh     := high
+                estHighBar  := bar_index
+                estHighLine := line.new(x1=bar_index, y1=estHigh, x2=bar_index + 25, y2=estHigh, 
+                                        color=c_estLine, style=line.style_solid, width=1)
+                estHighLbl  := label.new(x=bar_index + 25, y=estHigh, text="EST.H", 
+                                        style=label.style_label_left, color=color.new(#000000, 100), 
+                                        textcolor=c_estLine, size=size.tiny)
+
         else if structStage == 1
             breakEvent   := internalTag
             displayLabel := internalTag
@@ -180,43 +204,76 @@ if isConfirmed
             structStage  := 1
             lastBreakBar := bar_index
 
-        // Visual Break Line & Dark Pill Drawing
-        bool drawInternal = (breakEvent == internalTag and i_showInt) or (breakEvent == "FT" and canDrawFT)
+        // ----------------------------------------------------------------------
+        // DRAW BOS LINE (White Solid Line with Centered Yellow Text)
+        // ----------------------------------------------------------------------
+        bool canDrawLine = (breakEvent == "EST" and i_showBOS) or 
+                           (breakEvent == internalTag and i_showInt) or 
+                           (breakEvent == "FT" and canDrawFT)
 
-        if drawInternal
-            color lColor = breakEvent == "FT" ? c_ftLine : c_intLine
-            line.new(x1=activeHighBar, y1=activeHigh, x2=bar_index, y2=activeHigh, color=lColor, style=line.style_dotted, width=1)
-            label.new(x=int(math.round((activeHighBar + bar_index) / 2)), y=activeHigh, text=displayLabel, style=label.style_label_center, color=c_pillBg, textcolor=c_labelTxt, size=size.tiny)
+        if canDrawLine
+            color lCol   = breakEvent == "FT" ? c_ftLine : c_bosLine
+            string lSty  = breakEvent == "FT" ? line.style_dotted : line.style_solid
+            int midPoint = int(math.round((activeHighBar + bar_index) / 2))
+
+            line.new(x1=activeHighBar, y1=activeHigh, x2=bar_index, y2=activeHigh, 
+                     color=lCol, style=lSty, width=1)
+            label.new(x=midPoint, y=activeHigh, text=displayLabel, 
+                      style=label.style_label_center, color=color.new(#000000, 100), 
+                      textcolor=c_bosText, size=size.small)
 
         // ----------------------------------------------------------------------
-        // ZONE CANDLE MODEL: DEMAND ZONE CREATION
-        // Base candle located at activeLowBar (the displacement origin)
+        // DEMAND ZONE CREATION: Drawn for Bullish Structure ONLY
+        // Rule: "drawing Demand is for Bullish Structure"
+        // Rule: "use the lowest or highest candle for demand and supply"
         // ----------------------------------------------------------------------
         if i_showSD and not na(activeLowBar) and activeLowBar < bar_index
-            int originOffset = math.min(math.max(0, bar_index - activeLowBar), 499)
-            float dBot = low[originOffset]
-            float dTop = math.max(open[originOffset], close[originOffset])
+            // Locate the exact lowest candle within the curve base origin
+            int lowestBar = activeLowBar
+            int baseOff   = math.min(math.max(0, bar_index - activeLowBar), 499)
+            float minLow  = low[baseOff]
+            float candH   = high[baseOff]
+            float candO   = open[baseOff]
+            float candC   = close[baseOff]
 
+            // Symmetrical curve wing search [-2 to +2] around vertex
+            for off = -2 to 2
+                int cBar = activeLowBar + off
+                if cBar >= 0 and cBar < bar_index
+                    int cOff = bar_index - cBar
+                    if cOff >= 0 and cOff < 500
+                        if low[cOff] < minLow
+                            minLow    := low[cOff]
+                            lowestBar := cBar
+                            candH     := high[cOff]
+                            candO     := open[cOff]
+                            candC     := close[cOff]
+
+            float dBot = minLow
+            float dTop = i_zoneCandleModel == "Full Candle Range (High to Low)" ? candH : math.max(candO, candC)
             if dTop <= dBot
                 dTop := dBot + (ta.atr(14) * 0.3)
 
             activeZoneTop := dTop
             activeZoneBot := dBot
 
-            box demandBox = box.new(left=activeLowBar, top=dTop, right=bar_index + 20, bottom=dBot, bgcolor=color.new(c_demand, 85), border_color=color.new(c_demand, 25), border_width=1, border_style=line.style_solid)
-            label demandLbl = label.new(x=bar_index + 10, y=dTop, text="DEMAND [" + displayLabel + "] " + currentTfStr, style=label.style_label_left, color=color.new(c_demand, 10), textcolor=color.white, size=size.tiny)
+            // Box styling matching screenshot: dark translucent with subtle border & yellow text inside
+            box demandBox = box.new(left=lowestBar, top=dTop, right=bar_index + 20, bottom=dBot,
+                                    bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid,
+                                    text=displayLabel, text_size=size.small, text_color=c_bosText,
+                                    text_halign=text.halign_center, text_valign=text.valign_center)
 
+            // Maintain zone array bounded by max capacity
             if array.size(activeZones) >= i_maxZones
                 ZoneData oldZ = array.shift(activeZones)
                 box.delete(oldZ.bBox)
-                label.delete(oldZ.bLbl)
 
-            array.push(activeZones, ZoneData.new(demandBox, demandLbl, dTop, dBot, true, true, activeLowBar))
+            array.push(activeZones, ZoneData.new(demandBox, dTop, dBot, true, bar_index))
 
         activeHigh := na // Invalidate broken pivot level
 
     // --------------------------------------------------------------------------
-    // BEARISH BREAK: Full Candle-Body Close Below Active Swing Low
+    // BEARISH BREAK: Full Candle-Body Close Below Active Swing Curve Low
     // --------------------------------------------------------------------------
     else if not na(activeLow) and not na(activeLowBar) and close < activeLow
         isBearBreak := true
@@ -230,12 +287,31 @@ if isConfirmed
             currentTrend := -1
             lastBreakBar := bar_index
 
-            estLow       := activeLow
-            estLowBar    := activeLowBar
-            if not na(activeHigh)
-                estHigh      := activeHigh
-                estHighBar   := activeHighBar
-                estOriginBar := activeHighBar
+            // ------------------------------------------------------------------
+            // EST REPLACEMENT RULE: Remove old EST lines and draw new active EST
+            // ------------------------------------------------------------------
+            if i_showEST
+                f_deleteOldEST()
+
+                // New EST.H established at the curve origin high
+                if not na(activeHigh) and not na(activeHighBar)
+                    estHigh     := activeHigh
+                    estHighBar  := activeHighBar
+                    estHighLine := line.new(x1=activeHighBar, y1=estHigh, x2=bar_index + 25, y2=estHigh, 
+                                           color=c_estLine, style=line.style_solid, width=1)
+                    estHighLbl  := label.new(x=bar_index + 25, y=estHigh, text="EST.H", 
+                                            style=label.style_label_left, color=color.new(#000000, 100), 
+                                            textcolor=c_estLine, size=size.tiny)
+
+                // New EST.L initialized at the displacement impulse low
+                estLow     := low
+                estLowBar  := bar_index
+                estLowLine := line.new(x1=bar_index, y1=estLow, x2=bar_index + 25, y2=estLow, 
+                                       color=c_estLine, style=line.style_solid, width=1)
+                estLowLbl  := label.new(x=bar_index + 25, y=estLow, text="EST.L", 
+                                       style=label.style_label_left, color=color.new(#000000, 100), 
+                                       textcolor=c_estLine, size=size.tiny)
+
         else if structStage == 1
             breakEvent   := internalTag
             displayLabel := internalTag
@@ -252,93 +328,138 @@ if isConfirmed
             structStage  := 1
             lastBreakBar := bar_index
 
-        bool drawInternal = (breakEvent == internalTag and i_showInt) or (breakEvent == "FT" and canDrawFT)
+        // ----------------------------------------------------------------------
+        // DRAW BOS LINE (White Solid Line with Centered Yellow Text)
+        // ----------------------------------------------------------------------
+        bool canDrawLine = (breakEvent == "EST" and i_showBOS) or 
+                           (breakEvent == internalTag and i_showInt) or 
+                           (breakEvent == "FT" and canDrawFT)
 
-        if drawInternal
-            color lColor = breakEvent == "FT" ? c_ftLine : c_intLine
-            line.new(x1=activeLowBar, y1=activeLow, x2=bar_index, y2=activeLow, color=lColor, style=line.style_dotted, width=1)
-            label.new(x=int(math.round((activeLowBar + bar_index) / 2)), y=activeLow, text=displayLabel, style=label.style_label_center, color=c_pillBg, textcolor=c_labelTxt, size=size.tiny)
+        if canDrawLine
+            color lCol   = breakEvent == "FT" ? c_ftLine : c_bosLine
+            string lSty  = breakEvent == "FT" ? line.style_dotted : line.style_solid
+            int midPoint = int(math.round((activeLowBar + bar_index) / 2))
+
+            line.new(x1=activeLowBar, y1=activeLow, x2=bar_index, y2=activeLow, 
+                     color=lCol, style=lSty, width=1)
+            label.new(x=midPoint, y=activeLow, text=displayLabel, 
+                      style=label.style_label_center, color=color.new(#000000, 100), 
+                      textcolor=c_bosText, size=size.small)
 
         // ----------------------------------------------------------------------
-        // ZONE CANDLE MODEL: SUPPLY ZONE CREATION
-        // Base candle located at activeHighBar (the displacement origin)
+        // SUPPLY ZONE CREATION: Drawn for Bearish Structure ONLY
+        // Rule: "supply is for bearish Structure"
+        // Rule: "use the lowest or highest candle for demand and supply"
         // ----------------------------------------------------------------------
         if i_showSD and not na(activeHighBar) and activeHighBar < bar_index
-            int originOffset = math.min(math.max(0, bar_index - activeHighBar), 499)
-            float sTop = high[originOffset]
-            float sBot = math.min(open[originOffset], close[originOffset])
+            // Locate the exact highest candle within the curve base origin
+            int highestBar = activeHighBar
+            int baseOff    = math.min(math.max(0, bar_index - activeHighBar), 499)
+            float maxHigh  = high[baseOff]
+            float candL    = low[baseOff]
+            float candO    = open[baseOff]
+            float candC    = close[baseOff]
 
+            // Symmetrical curve wing search [-2 to +2] around vertex
+            for off = -2 to 2
+                int cBar = activeHighBar + off
+                if cBar >= 0 and cBar < bar_index
+                    int cOff = bar_index - cBar
+                    if cOff >= 0 and cOff < 500
+                        if high[cOff] > maxHigh
+                            maxHigh    := high[cOff]
+                            highestBar := cBar
+                            candL      := low[cOff]
+                            candO      := open[cOff]
+                            candC      := close[cOff]
+
+            float sTop = maxHigh
+            float sBot = i_zoneCandleModel == "Full Candle Range (High to Low)" ? candL : math.min(candO, candC)
             if sTop <= sBot
                 sBot := sTop - (ta.atr(14) * 0.3)
 
             activeZoneTop := sTop
             activeZoneBot := sBot
 
-            box supplyBox = box.new(left=activeHighBar, top=sTop, right=bar_index + 20, bottom=sBot, bgcolor=color.new(c_supply, 85), border_color=color.new(c_supply, 25), border_width=1, border_style=line.style_solid)
-            label supplyLbl = label.new(x=bar_index + 10, y=sBot, text="SUPPLY [" + displayLabel + "] " + currentTfStr, style=label.style_label_left, color=color.new(c_supply, 10), textcolor=color.white, size=size.tiny)
+            // Box styling matching screenshot: dark translucent with subtle border & yellow text inside
+            box supplyBox = box.new(left=highestBar, top=sTop, right=bar_index + 20, bottom=sBot,
+                                    bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid,
+                                    text=displayLabel, text_size=size.small, text_color=c_bosText,
+                                    text_halign=text.halign_center, text_valign=text.valign_center)
 
             if array.size(activeZones) >= i_maxZones
                 ZoneData oldZ = array.shift(activeZones)
                 box.delete(oldZ.bBox)
-                label.delete(oldZ.bLbl)
 
-            array.push(activeZones, ZoneData.new(supplyBox, supplyLbl, sTop, sBot, false, true, activeHighBar))
+            array.push(activeZones, ZoneData.new(supplyBox, sTop, sBot, false, bar_index))
 
         activeLow := na // Invalidate broken pivot level
 
 // ==============================================================================
-// 6. EXTERNAL STRUCTURE BRACKET & STEM (EST.H / EST.L)
+// 7. DEALING RANGE (EST) DYNAMIC EXTENSION ENGINE
 // ==============================================================================
-if i_showEST and barstate.islast
-    line.delete(estHighLine)
-    line.delete(estLowLine)
-    line.delete(estStemLine)
-    label.delete(estHighLbl)
-    label.delete(estLowLbl)
+if i_showEST
+    // Dynamically expand impulse bounds while trend continues
+    if currentTrend == 1 and not na(estHigh) and high > estHigh
+        estHigh := high
+        if not na(estHighLine)
+            line.set_y1(estHighLine, estHigh)
+            line.set_y2(estHighLine, estHigh)
+        if not na(estHighLbl)
+            label.set_y(estHighLbl, estHigh)
 
-    if not na(estHigh) and not na(estHighBar)
-        int startH = math.max(0, estHighBar)
-        estHighLine := line.new(x1=startH, y1=estHigh, x2=bar_index + 20, y2=estHigh, color=c_est, style=line.style_solid, width=1)
-        estHighLbl  := label.new(x=bar_index + 20, y=estHigh, text="EST.H", style=label.style_label_left, color=color.new(#000000, 100), textcolor=c_labelTxt, size=size.tiny)
+    if currentTrend == -1 and not na(estLow) and low < estLow
+        estLow := low
+        if not na(estLowLine)
+            line.set_y1(estLowLine, estLow)
+            line.set_y2(estLowLine, estLow)
+        if not na(estLowLbl)
+            label.set_y(estLowLbl, estLow)
 
-    if not na(estLow) and not na(estLowBar)
-        int startL = math.max(0, estLowBar)
-        estLowLine := line.new(x1=startL, y1=estLow, x2=bar_index + 20, y2=estLow, color=c_est, style=line.style_solid, width=1)
-        estLowLbl  := label.new(x=bar_index + 20, y=estLow, text="EST.L", style=label.style_label_left, color=color.new(#000000, 100), textcolor=c_labelTxt, size=size.tiny)
-
-    // Vertical origin connector stem (Inverted-L Range Bracket)
-    if i_showStem and not na(estOriginBar) and not na(estHigh) and not na(estLow)
-        int stemX = math.max(0, estOriginBar)
-        estStemLine := line.new(x1=stemX, y1=estLow, x2=stemX, y2=estHigh, color=c_est, style=line.style_solid, width=1)
+    // Extend lines into the future
+    if not na(estHighLine)
+        line.set_x2(estHighLine, bar_index + 25)
+    if not na(estLowLine)
+        line.set_x2(estLowLine, bar_index + 25)
+    if not na(estHighLbl)
+        label.set_x(estHighLbl, bar_index + 25)
+    if not na(estLowLbl)
+        label.set_x(estLowLbl, bar_index + 25)
 
 // ==============================================================================
-// 7. ZONE INVALIDATION & EXTENSION ENGINE
+// 8. S&D ZONE MITIGATION & TOUCH DELETION ENGINE
+// Rule: "( remove after its mitigated or filled order or touch by candle or wick )"
+// Only 100% fresh, unmitigated zones remain visible on the chart.
 // ==============================================================================
 if isConfirmed and array.size(activeZones) > 0
-    for i = 0 to array.size(activeZones) - 1
-        ZoneData z = array.get(activeZones, i)
-        if z.isActive
-            bool invalidated = false
-            if z.isDemand and close < z.botPrice
-                invalidated := true
-            else if not z.isDemand and close > z.topPrice
-                invalidated := true
+    int idx = array.size(activeZones) - 1
+    while idx >= 0
+        ZoneData z = array.get(activeZones, idx)
+        bool isTouched = false
 
-            if invalidated
-                z.isActive := false
-                box.set_bgcolor(z.bBox, color.new(c_dimmed, 85))
-                box.set_border_color(z.bBox, color.new(#64748b, 40))
-                box.set_border_style(z.bBox, line.style_dotted)
-                box.set_right(z.bBox, bar_index)
-                label.set_color(z.bLbl, color.new(#334155, 30))
-                label.set_textcolor(z.bLbl, #94a3b8)
-                label.set_text(z.bLbl, (z.isDemand ? "MITIGATED DEMAND " : "MITIGATED SUPPLY ") + currentTfStr)
+        // Check candles following the creation bar for wick or body touch
+        if bar_index > z.createdBar
+            if z.isDemand
+                // Touched by candle or wick: candle low touched or penetrated demand top
+                if low <= z.topPrice
+                    isTouched := true
             else
-                box.set_right(z.bBox, bar_index + 15)
-                label.set_x(z.bLbl, bar_index + 15)
+                // Touched by candle or wick: candle high touched or penetrated supply bottom
+                if high >= z.botPrice
+                    isTouched := true
+
+        if isTouched
+            // Immediately delete box from chart so it leaves zero clutter
+            box.delete(z.bBox)
+            array.remove(activeZones, idx)
+        else
+            // Extend fresh unmitigated zone forward
+            box.set_right(z.bBox, bar_index + 20)
+
+        idx -= 1
 
 // ==============================================================================
-// 8. TELEMETRY HUD TABLE
+// 9. TELEMETRY HUD TABLE
 // ==============================================================================
 var table hudTable = table.new(position.top_right, 2, 7, bgcolor=color.new(#030712, 15), border_color=color.new(#ffffff, 85), border_width=1)
 
@@ -354,13 +475,13 @@ if i_showHUD and barstate.islast
     biasColor = currentTrend == 1 ? #10b981 : currentTrend == -1 ? #ef4444 : #94a3b8
     table.cell(hudTable, 1, 2, biasStr, text_color=biasColor, text_size=size.tiny)
 
-    table.cell(hudTable, 0, 3, "External Range High", text_color=#94a3b8, text_size=size.tiny)
+    table.cell(hudTable, 0, 3, "Active EST High", text_color=#94a3b8, text_size=size.tiny)
     table.cell(hudTable, 1, 3, not na(estHigh) ? str.tostring(estHigh, "#.##") : "Searching...", text_color=#f43f5e, text_size=size.tiny)
 
-    table.cell(hudTable, 0, 4, "External Range Low", text_color=#94a3b8, text_size=size.tiny)
+    table.cell(hudTable, 0, 4, "Active EST Low", text_color=#94a3b8, text_size=size.tiny)
     table.cell(hudTable, 1, 4, not na(estLow) ? str.tostring(estLow, "#.##") : "Searching...", text_color=#10b981, text_size=size.tiny)
 
-    table.cell(hudTable, 0, 5, "Internal Notation", text_color=#94a3b8, text_size=size.tiny)
+    table.cell(hudTable, 0, 5, "Internal Tag", text_color=#94a3b8, text_size=size.tiny)
     table.cell(hudTable, 1, 5, internalTag, text_color=#fbbf24, text_size=size.tiny)
 
     table.cell(hudTable, 0, 6, "FT Engine State", text_color=#94a3b8, text_size=size.tiny)
@@ -368,7 +489,7 @@ if i_showHUD and barstate.islast
     table.cell(hudTable, 1, 6, ftStatus, text_color=isM3 ? #f59e0b : #10b981, text_size=size.tiny)
 
 // ==============================================================================
-// 9. WEBHOOK & QUANTITATIVE ALERTS DISPATCH
+// 10. WEBHOOK & QUANTITATIVE ALERTS DISPATCH
 // ==============================================================================
 if isConfirmed and (isBullBreak or isBearBreak)
     string dirStr   = isBullBreak ? "BUY_LIMIT" : "SELL_LIMIT"
