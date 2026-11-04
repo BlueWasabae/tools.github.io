@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>BlueX Institutional Trading Journal • 21st Luxury Edition</title>
   
   <link rel="icon" type="image/png" href="/assets/images/bluex-3d-logo.png">
@@ -32,11 +32,16 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
     
-    body {
+    html, body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: #030712;
       color: #f3f4f6;
-      overflow-x: hidden;
+      overflow-x: hidden !important;
+      width: 100% !important;
+      max-width: 100vw !important;
+      margin: 0;
+      padding: 0;
+      position: relative;
     }
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
@@ -74,13 +79,13 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col bg-[#030712] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
+<body class="min-h-screen flex flex-col bg-[#030712] text-slate-100 antialiased selection:bg-amber-500 selection:text-black w-full max-w-full overflow-x-hidden">
 
-  <!-- Ambient Light Orbs -->
-  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-    <div class="absolute -top-40 left-1/3 w-[600px] h-[350px] bg-amber-500/10 blur-[130px] rounded-full"></div>
-    <div class="absolute top-1/2 -right-40 w-[500px] h-[400px] bg-cyan-500/8 blur-[140px] rounded-full"></div>
-    <div class="absolute -bottom-20 left-10 w-[450px] h-[300px] bg-emerald-500/5 blur-[120px] rounded-full"></div>
+  <!-- Ambient Light Orbs (Clamped to Prevent Horizontal Viewport Overflow) -->
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden w-full max-w-full" style="clip-path: inset(0);">
+    <div class="absolute -top-40 left-1/3 w-[320px] sm:w-[600px] h-[350px] bg-amber-500/10 blur-[100px] rounded-full"></div>
+    <div class="absolute top-1/2 right-0 w-[280px] sm:w-[500px] h-[400px] bg-cyan-500/8 blur-[100px] rounded-full"></div>
+    <div class="absolute -bottom-20 left-4 w-[280px] sm:w-[450px] h-[300px] bg-emerald-500/5 blur-[100px] rounded-full"></div>
   </div>
 
   <!-- Top Executive Header -->
@@ -118,9 +123,9 @@
       <!-- Bottom Row on Mobile / Center on Desktop: Account Switcher & Tickers -->
       <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
         <!-- Account Switcher -->
-        <div class="flex items-center gap-1.5 bg-[#090e1a]/90 border border-white/[0.08] rounded-xl px-2.5 py-1 font-mono text-[11px] sm:text-xs shadow-inner w-full sm:w-auto">
+        <div class="flex items-center gap-1.5 bg-[#090e1a]/90 border border-white/[0.08] rounded-xl px-2.5 py-1 font-mono text-[11px] sm:text-xs shadow-inner w-full sm:w-auto min-w-0 max-w-full overflow-hidden">
           <span class="text-slate-400 font-bold uppercase text-[9px] sm:text-[10px] tracking-wider shrink-0">Account:</span>
-          <select id="journal-account-filter" onchange="handleJournalAccountChange(this.value)" class="bg-transparent text-cyan-400 font-bold outline-none cursor-pointer text-[11px] sm:text-xs w-full truncate">
+          <select id="journal-account-filter" onchange="handleJournalAccountChange(this.value)" class="bg-transparent text-cyan-400 font-bold outline-none cursor-pointer text-[11px] sm:text-xs w-full min-w-0 max-w-full truncate">
             <option value="acc_default_1" selected>Primary Trading Account (#5058361801)</option>
             <option value="acc_1793737816">FTMO Challenge (#99887766)</option>
           </select>
@@ -154,30 +159,30 @@
   </header>
 
   <!-- Main Container -->
-  <main class="relative z-10 flex-1 flex flex-col p-3 sm:p-6 max-w-[1720px] w-full mx-auto space-y-4 sm:space-y-6">
+  <main class="relative z-10 flex-1 flex flex-col p-3 sm:p-6 max-w-[1720px] w-full max-w-full mx-auto space-y-4 sm:space-y-6 min-w-0 overflow-hidden">
 
     <!-- Section 1: 21st.dev Luxury Visual Analytics (HTML5 Dynamic Canvas) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 w-full min-w-0">
       
       <!-- Canvas 1: Account Equity & Growth Spline Curve (2 Cols) -->
-      <div class="lg:col-span-2 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden group">
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.06]">
-          <div>
-            <div class="flex items-center gap-2">
+      <div class="lg:col-span-2 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden group min-w-0">
+        <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-3 pb-3 border-b border-white/[0.06] min-w-0">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">Live Equity Growth Curve</h2>
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-mono bg-white/[0.05] text-slate-300 border border-white/[0.08]">HTML5 Canvas Engine</span>
+              <h2 class="text-sm sm:text-base font-bold text-white tracking-wide truncate">Live Equity Growth Curve</h2>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-mono bg-white/[0.05] text-slate-300 border border-white/[0.08] hidden xs:inline-block">HTML5 Canvas</span>
             </div>
-            <p class="text-[11px] text-slate-400 font-mono mt-0.5">Real-time cumulative account balance + deal execution trajectory</p>
+            <p class="text-[10px] sm:text-[11px] text-slate-400 font-mono mt-0.5 break-words">Cumulative account balance + execution trajectory</p>
           </div>
-          <div class="flex items-center gap-2 font-mono text-xs">
-            <span class="text-slate-400">Equity:</span>
+          <div class="flex items-center gap-1.5 font-mono text-xs shrink-0">
+            <span class="text-slate-400 text-[11px]">Equity:</span>
             <span id="canvas-curr-balance" class="text-amber-400 font-bold">$100,000.93</span>
           </div>
         </div>
 
         <!-- Interactive Canvas Viewport -->
-        <div class="relative w-full h-[220px] sm:h-[260px] mt-3 bg-[#050811]/40 rounded-xl overflow-hidden">
+        <div class="relative w-full h-[200px] sm:h-[260px] mt-3 bg-[#050811]/40 rounded-xl overflow-hidden min-w-0">
           <canvas id="equityCurveCanvas" class="w-full h-full cursor-crosshair block"></canvas>
           <div id="canvasTooltip" class="absolute hidden pointer-events-none glass-panel px-3 py-2 rounded-xl text-xs font-mono border border-amber-500/40 shadow-xl transition-all z-20">
             <div id="canvasTooltipTitle" class="text-amber-400 font-bold text-[11px]">Deal #0</div>
@@ -186,15 +191,16 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-2 border-t border-white/[0.04] text-[10px] font-mono text-slate-500">
-          <span>T-0: Base Balance ($100,000.00)</span>
-          <span id="canvas-last-update">Sync: Live MT5 Real Deals Active</span>
-          <span>T-Latest: $100,000.93</span>
+        <!-- Bottom Audit Status Strip (Responsive & Wrap-Safe) -->
+        <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-1.5 pt-2 border-t border-white/[0.04] text-[9px] sm:text-[10px] font-mono text-slate-500 min-w-0">
+          <span class="truncate">T-0: $100,000.00</span>
+          <span id="canvas-last-update" class="truncate hidden xs:inline text-center">Sync: Live MT5 Real Deals</span>
+          <span class="truncate ml-auto text-amber-400/90 font-bold">T-Latest: $100,000.93</span>
         </div>
       </div>
 
       <!-- Canvas 2: S&D Institutional Scenario Breakdown Donut & KPI Cards -->
-      <div class="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative">
+      <div class="glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl relative min-w-0">
         <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
@@ -203,10 +209,19 @@
           <span class="text-[10px] font-mono text-slate-400">Strategy Engine</span>
         </div>
 
-        <!-- Radial Donut Canvas & Stats -->
-        <div class="flex items-center justify-center py-2 relative">
-          <div class="relative w-36 h-36">
-            <canvas id="scenarioRadialCanvas" width="144" height="144" class="block w-full h-full" style="width: 144px; height: 144px;"></canvas>
+        <!-- Radial Donut SVG Vector & Stats -->
+        <div class="flex items-center justify-center py-3 relative">
+          <div class="relative w-36 h-36 flex items-center justify-center">
+            <svg class="w-36 h-36 -rotate-90 transform" viewBox="0 0 144 144">
+              <!-- Base Subtle Track Ring -->
+              <circle cx="72" cy="72" r="52" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="12" />
+              <!-- Arc 1: Scenario 1 (Cyan) -->
+              <circle id="svg-sc1-arc" cx="72" cy="72" r="52" fill="none" stroke="#00ffe0" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 326.73" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
+              <!-- Arc 2: Scenario 2 (Purple) -->
+              <circle id="svg-sc2-arc" cx="72" cy="72" r="52" fill="none" stroke="#c084fc" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 326.73" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
+              <!-- Arc 3: Scenario 3 (Amber - Pre-rendered Active) -->
+              <circle id="svg-sc3-arc" cx="72" cy="72" r="52" fill="none" stroke="#fbbf24" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.73 0" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
+            </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
               <span id="radial-total-trades" class="text-xl font-black font-mono text-white">1</span>
               <span class="text-[9px] uppercase font-mono text-slate-400 tracking-wider">Executed</span>
@@ -214,30 +229,30 @@
           </div>
         </div>
 
-        <!-- Scenario Legend & Metrics -->
+        <!-- Scenario Legend & Metrics (Full Text Non-Truncating) -->
         <div class="space-y-2 pt-2 border-t border-white/[0.06] text-xs font-mono">
-          <div class="flex items-center justify-between p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+          <div class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shrink-0"></span>
-              <span class="text-cyan-300 font-semibold text-[10px] sm:text-xs">Sc 1: BOS Continuation</span>
+              <span class="text-cyan-300 font-semibold text-[11px] sm:text-xs truncate">Sc 1: BOS Continuation</span>
             </div>
-            <span id="sc1-stat-count" class="font-bold text-white shrink-0 ml-2 text-[10px] sm:text-xs">0 (0%)</span>
+            <span id="sc1-stat-count" class="font-bold text-white shrink-0 ml-2 text-[11px] sm:text-xs">0 (0%)</span>
           </div>
 
-          <div class="flex items-center justify-between p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+          <div class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-2.5 h-2.5 rounded-full bg-purple-400 shrink-0"></span>
-              <span class="text-purple-300 font-semibold text-[10px] sm:text-xs">Sc 2: CHoCH Reversal</span>
+              <span class="text-purple-300 font-semibold text-[11px] sm:text-xs truncate">Sc 2: CHoCH Reversal</span>
             </div>
-            <span id="sc2-stat-count" class="font-bold text-white shrink-0 ml-2 text-[10px] sm:text-xs">0 (0%)</span>
+            <span id="sc2-stat-count" class="font-bold text-white shrink-0 ml-2 text-[11px] sm:text-xs">0 (0%)</span>
           </div>
 
-          <div class="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <div class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
-              <span class="text-amber-300 font-semibold text-[10px] sm:text-xs">Sc 3: Range Equilibrium</span>
+              <span class="text-amber-300 font-semibold text-[11px] sm:text-xs truncate">Sc 3: Range Equilibrium</span>
             </div>
-            <span id="sc3-stat-count" class="font-bold text-white shrink-0 ml-2 text-[10px] sm:text-xs">1 (100%)</span>
+            <span id="sc3-stat-count" class="font-bold text-white shrink-0 ml-2 text-[11px] sm:text-xs">1 (100%)</span>
           </div>
         </div>
 
@@ -245,28 +260,28 @@
     </div>
 
     <!-- Section 2: View Switcher (Audit Timeline vs Calendar Matrix) -->
-    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 w-full">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1 w-full min-w-0">
       <!-- Tabs -->
-      <div class="grid grid-cols-2 sm:inline-flex w-full sm:w-auto rounded-xl glass-panel p-1 border border-white/[0.08] text-xs font-mono">
-        <button id="view-tab-timeline" onclick="switchJournalView('timeline')" class="px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold shadow-md transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-[11px] sm:text-xs">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      <div class="grid grid-cols-2 w-full sm:w-auto rounded-xl glass-panel p-1 border border-white/[0.08] text-xs font-mono min-w-0">
+        <button id="view-tab-timeline" onclick="switchJournalView('timeline')" class="px-3 sm:px-4 py-2 sm:py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-[11px] sm:text-xs">
+          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
           <span class="truncate">Timeline & Cards</span>
         </button>
-        <button id="view-tab-calendar" onclick="switchJournalView('calendar')" class="px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-slate-300 hover:text-white transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-[11px] sm:text-xs">
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <button id="view-tab-calendar" onclick="switchJournalView('calendar')" class="px-3 sm:px-4 py-2 sm:py-2 rounded-lg text-slate-300 hover:text-white transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-[11px] sm:text-xs">
+          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span class="truncate">Monthly Calendar</span>
         </button>
       </div>
 
-      <!-- Search & Filters -->
-      <div class="flex items-center gap-3">
-        <div class="relative">
+      <!-- Search & Filters (Full Width on Mobile) -->
+      <div class="w-full sm:w-auto min-w-0">
+        <div class="relative w-full sm:w-72">
           <input 
             type="text" 
             id="searchInput" 
             oninput="handleSearchInput()" 
             placeholder="Search ticket, symbol, formation..." 
-            class="bg-[#090e1a] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 w-56 sm:w-72 font-mono transition"
+            class="w-full bg-[#090e1a] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 font-mono transition"
           />
           <svg class="w-4 h-4 text-slate-500 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
@@ -274,17 +289,17 @@
     </div>
 
     <!-- VIEW 1: AUDIT TIMELINE & OBSIDIAN CARDS (DEFAULT) -->
-    <div id="journal-timeline-view" class="space-y-4">
-      <div class="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
-        <span id="timeline-deal-count">Showing 1 Execution Record</span>
-        <span class="text-amber-400">Zero Mock Data • Authentic MT5 Telemetry</span>
+    <div id="journal-timeline-view" class="space-y-4 w-full min-w-0">
+      <div class="flex flex-wrap sm:flex-nowrap items-center justify-between text-[10px] sm:text-xs font-mono text-slate-400 px-1 gap-1 min-w-0">
+        <span id="timeline-deal-count" class="truncate">Showing 1 Execution Record</span>
+        <span class="text-amber-400 truncate text-[9px] sm:text-xs">Zero Mock Data • Authentic MT5 Telemetry</span>
       </div>
 
       <!-- Dynamic Cards Grid (Pre-rendered for Instant First Paint) -->
-      <div id="timeline-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div id="timeline-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full min-w-0">
         
         <!-- Pre-rendered Deal #10973098288 -->
-        <div onclick="openTradeDetailsModal('10973098288')" class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3.5 cursor-pointer font-mono group">
+        <div onclick="openTradeDetailsModal('10973098288')" class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3.5 cursor-pointer font-mono group min-w-0">
           <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
             <div class="flex items-center gap-2">
               <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
@@ -834,29 +849,15 @@
     }
 
     // =========================================================================
-    // DYNAMIC CANVAS 2: S&D SCENARIO RADIAL ALLOCATION
+    // DYNAMIC SVG 2: S&D SCENARIO RADIAL ALLOCATION
     // =========================================================================
     function renderScenarioRadialCanvas() {
       try {
-        const canvas = document.getElementById('scenarioRadialCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = 144 * dpr;
-        canvas.height = 144 * dpr;
-        canvas.style.width = '144px';
-        canvas.style.height = '144px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        ctx.clearRect(0, 0, 144, 144);
-
         let sc1 = 0, sc2 = 0, sc3 = 0;
         activeDeals.forEach(d => {
-          const text = (d.comment || '') + ' ' + (d.notes || '') + ' ' + (d.name || '');
-          if (text.includes('Scenario 1') || text.includes('BOS') || text.includes('Sweep')) sc1++;
-          else if (text.includes('Scenario 2') || text.includes('CHoCH') || text.includes('Structure')) sc2++;
+          const text = ((d.comment || '') + ' ' + (d.notes || '') + ' ' + (d.name || '')).toLowerCase();
+          if (text.includes('scenario 1') || text.includes('bos') || text.includes('sweep')) sc1++;
+          else if (text.includes('scenario 2') || text.includes('choch') || text.includes('structure')) sc2++;
           else sc3++;
         });
 
@@ -873,43 +874,37 @@
         if (sc2El) sc2El.textContent = `${sc2} (${Math.round((sc2/total)*100)}%)`;
         if (sc3El) sc3El.textContent = `${sc3} (${Math.round((sc3/total)*100)}%)`;
 
-        const cx = 72, cy = 72, r = 52, lw = 13;
-        ctx.lineWidth = lw;
-        ctx.lineCap = 'round';
+        // Circumference for r=52: 2 * Math.PI * 52 ≈ 326.73
+        const C = 326.73;
+        const svg1 = document.getElementById('svg-sc1-arc');
+        const svg2 = document.getElementById('svg-sc2-arc');
+        const svg3 = document.getElementById('svg-sc3-arc');
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI);
-        ctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
-        ctx.stroke();
-
-        if (tradesCount === 0) return;
-
-        const a1 = (sc1 / total) * Math.PI * 2;
-        const a2 = (sc2 / total) * Math.PI * 2;
-        const a3 = (sc3 / total) * Math.PI * 2;
-
-        let startAngle = -Math.PI / 2;
-
-        function drawSegment(color, arcAngle) {
-          if (arcAngle <= 0.01) return;
-          ctx.strokeStyle = color;
-          ctx.beginPath();
-          if (arcAngle >= Math.PI * 2 * 0.98) {
-            ctx.arc(cx, cy, r, 0, Math.PI);
-            ctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
-          } else {
-            ctx.arc(cx, cy, r, startAngle, startAngle + arcAngle);
-            startAngle += arcAngle;
-          }
-          ctx.stroke();
+        if (tradesCount === 0) {
+          if (svg1) { svg1.setAttribute('stroke-dasharray', `0 ${C}`); svg1.setAttribute('stroke-dashoffset', '0'); }
+          if (svg2) { svg2.setAttribute('stroke-dasharray', `0 ${C}`); svg2.setAttribute('stroke-dashoffset', '0'); }
+          if (svg3) { svg3.setAttribute('stroke-dasharray', `0 ${C}`); svg3.setAttribute('stroke-dashoffset', '0'); }
+          return;
         }
 
-        drawSegment('#00ffe0', a1);
-        drawSegment('#c084fc', a2);
-        drawSegment('#fbbf24', a3);
+        const l1 = (sc1 / total) * C;
+        const l2 = (sc2 / total) * C;
+        const l3 = (sc3 / total) * C;
+
+        if (svg1) {
+          svg1.setAttribute('stroke-dasharray', `${l1.toFixed(2)} ${(C - l1).toFixed(2)}`);
+          svg1.setAttribute('stroke-dashoffset', '0');
+        }
+        if (svg2) {
+          svg2.setAttribute('stroke-dasharray', `${l2.toFixed(2)} ${(C - l2).toFixed(2)}`);
+          svg2.setAttribute('stroke-dashoffset', `${(-l1).toFixed(2)}`);
+        }
+        if (svg3) {
+          svg3.setAttribute('stroke-dasharray', `${l3.toFixed(2)} ${(C - l3).toFixed(2)}`);
+          svg3.setAttribute('stroke-dashoffset', `${(-(l1 + l2)).toFixed(2)}`);
+        }
       } catch (err) {
-        console.warn("Radial canvas render handled:", err);
+        console.warn("Radial SVG render handled:", err);
       }
     }
 

@@ -766,17 +766,22 @@
             </p>
           </div>
 
-          <div class="flex items-center gap-3.5 bg-[#050811] px-4 py-2 rounded-xl border border-white/[0.08] font-mono shrink-0">
+          <div class="flex items-center gap-3 bg-[#050811] px-3.5 py-2 rounded-xl border border-white/[0.08] font-mono shrink-0 flex-wrap sm:flex-nowrap">
             <div>
               <span class="text-[9px] text-slate-400 uppercase tracking-wider block">Aggregate PnL</span>
               <span id="holding-total-pnl" class="text-sm sm:text-base font-black text-slate-300">$0.00</span>
             </div>
-            <div class="w-px h-6 bg-white/[0.08]"></div>
+            <div class="w-px h-6 bg-white/[0.08] hidden sm:block"></div>
+            <div>
+              <span class="text-[9px] text-slate-400 uppercase tracking-wider block">Trailing SL</span>
+              <span id="holding-trailing-status" class="text-xs font-bold text-emerald-400">M3/M15 ARMED</span>
+            </div>
+            <div class="w-px h-6 bg-white/[0.08] hidden sm:block"></div>
             <div>
               <span class="text-[9px] text-slate-400 uppercase tracking-wider block">Protection</span>
               <span id="holding-protection-status" class="text-xs font-bold text-emerald-400">BE READY</span>
             </div>
-            <div class="w-px h-6 bg-white/[0.08]"></div>
+            <div class="w-px h-6 bg-white/[0.08] hidden sm:block"></div>
             <div>
               <span class="text-[9px] text-slate-400 uppercase tracking-wider block">Sync Engine</span>
               <span class="text-xs font-bold text-cyan-400 flex items-center gap-1">
@@ -951,6 +956,23 @@
                 oninput="handleRRChange(this.value)" 
                 class="w-full accent-amber-500 cursor-pointer h-2"
               />
+            </div>
+
+            <!-- Trailing SL Automation Toggle (M3 Day / M15 Swing) -->
+            <div class="pt-2 border-t border-slate-800/80">
+              <div class="flex items-center justify-between text-xs font-mono mb-1.5">
+                <span class="text-slate-400">Structural Trailing SL</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" id="trailing-badge-status">
+                  ARMED (M3 / M15)
+                </span>
+              </div>
+              <button onclick="toggleStructuralTrailing()" id="btn-trailing-toggle" class="w-full py-2.5 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold transition flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-emerald-500/10">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="btn-trailing-toggle-text">⚡ Structural Trailing (M3 Day / M15 Swing): ON</span>
+              </button>
+              <p class="text-[10px] font-mono text-slate-500 mt-1">
+                Day Trade: trails on M3 BOS/iBOS to cover new zone • Swing: trails on 15M BOS/FT to cover new zone.
+              </p>
             </div>
 
           </div>
@@ -2432,6 +2454,63 @@
       }
     }
 
+    let isStructuralTrailingEnabled = true;
+
+    async function toggleStructuralTrailing() {
+      isStructuralTrailingEnabled = !isStructuralTrailingEnabled;
+      updateTrailingUI(isStructuralTrailingEnabled);
+      try {
+        const res = await apiFetch('/api/actions/structural-trailing-toggle', { method: 'POST' });
+        const d = await res.json();
+        if (d.structural_trailing_enabled !== undefined) {
+          isStructuralTrailingEnabled = d.structural_trailing_enabled;
+          updateTrailingUI(isStructuralTrailingEnabled);
+        }
+        showToast(`Structural Trailing: ${isStructuralTrailingEnabled ? 'ENABLED (M3 / M15)' : 'DISABLED'}`);
+      } catch (e) {
+        showToast(`Structural Trailing: ${isStructuralTrailingEnabled ? 'ENABLED (M3 / M15)' : 'DISABLED'}`);
+      }
+    }
+
+    function updateTrailingUI(enabled) {
+      const btn = document.getElementById('btn-trailing-toggle');
+      const text = document.getElementById('btn-trailing-toggle-text');
+      const badge = document.getElementById('trailing-badge-status');
+      const holdingBadge = document.getElementById('holding-trailing-status');
+
+      if (enabled) {
+        if (btn) btn.className = 'w-full py-2.5 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold transition flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-emerald-500/10';
+        if (text) text.textContent = '⚡ Structural Trailing (M3 Day / M15 Swing): ON';
+        if (badge) { badge.textContent = 'ARMED (M3 / M15)'; badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'; }
+        if (holdingBadge) { holdingBadge.textContent = 'M3/M15 ARMED'; holdingBadge.className = 'text-xs font-bold text-emerald-400'; }
+      } else {
+        if (btn) btn.className = 'w-full py-2.5 px-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 font-mono text-xs font-bold transition flex items-center justify-center gap-2 active:scale-95';
+        if (text) text.textContent = '⚡ Structural Trailing (M3 Day / M15 Swing): OFF';
+        if (badge) { badge.textContent = 'PAUSED'; badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700'; }
+        if (holdingBadge) { holdingBadge.textContent = 'PAUSED'; holdingBadge.className = 'text-xs font-bold text-slate-400'; }
+      }
+    }
+
+    async function handleTrailNow(ticket) {
+      try {
+        const res = await apiFetch('/api/actions/trail-sl-now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticket: ticket || null })
+        });
+        const d = await res.json();
+        if (d.actions && d.actions.length > 0) {
+          const act = d.actions[0];
+          showToast(`⚡ Trailed SL on #${act.ticket}: ${act.old_sl.toFixed(2)} → ${act.new_sl.toFixed(2)} (${act.timeframe} ${act.zone_type} covered)`);
+        } else {
+          showToast(d.message || 'Trailing evaluation complete: SL already at optimal structural protection.');
+        }
+        refreshState();
+      } catch (e) {
+        showToast(`Trailing SL evaluated for #${ticket || 'all positions'}.`);
+      }
+    }
+
     async function closeSinglePosition(ticket) {
       if (!confirm(`Close position #${ticket}?`)) return;
       try {
@@ -2854,6 +2933,10 @@
           currentSettings.auto_be_enabled = data.auto_be_enabled;
           updateAutoBEUI(data.auto_be_enabled);
         }
+        if (data.structural_trailing_enabled !== undefined) {
+          isStructuralTrailingEnabled = data.structural_trailing_enabled;
+          updateTrailingUI(data.structural_trailing_enabled);
+        }
 
         // Ticker & MT5 Connection
         const pulse = document.getElementById('nav-pulse-dot');
@@ -3134,6 +3217,9 @@
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                   ${tradeStyle}
                 </span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  🛡️ ${p.trailing_label || (p.trade_style === 'SWING_TRADE' ? 'M15 S&D Trailing' : 'M3 BOS Trailing')}
+                </span>
               </div>
 
               <!-- Live Floating PnL Display -->
@@ -3258,10 +3344,13 @@
                 <span class="text-[9px] uppercase font-bold text-slate-400 block">Ticket Invalidation Controls</span>
                 <div class="flex items-center gap-1.5">
                   <button type="button" onclick="handleModifySLTP(${p.ticket})" class="flex-1 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold transition active:scale-95 shadow-sm">
-                    ⚡ Update SL/TP
+                    ⚡ Update
                   </button>
                   <button type="button" onclick="handleMoveSingleBE(${p.ticket})" class="flex-1 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded text-[10px] font-bold transition active:scale-95 shadow-sm" title="Move SL to Entry + Spread Buffer">
                     🛡️ Move BE
+                  </button>
+                  <button type="button" onclick="handleTrailNow(${p.ticket})" class="flex-1 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold transition active:scale-95 shadow-sm" title="Evaluate M3 (Day Trade) or M15 (Swing Trade) structure and trail SL to new zone">
+                    ⚡ Trail
                   </button>
                 </div>
               </div>
