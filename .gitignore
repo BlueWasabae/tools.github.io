@@ -5,3 +5,6 @@ server_run.log
 .env
 .DS_Store
 Thumbs.db
+
+cloudflared.exe
+*.exe

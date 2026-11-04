@@ -184,6 +184,11 @@
             <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
             <span>MT5 Bridge Guide</span>
           </button>
+          <button onclick="openBridgeModal()" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Bridge & Tunnel URL</span>
+            <span class="ml-auto text-[10px] font-mono text-cyan-400 font-bold">CONFIG</span>
+          </button>
         </nav>
       </div>
 
@@ -230,11 +235,11 @@
         </div>
       </div>
 
-      <!-- Center: Live Market Ticker -->
-      <div class="hidden md:flex items-center gap-4 bg-slate-900/80 border border-slate-800/90 rounded-full px-4 py-1.5 text-xs font-mono">
+      <!-- Center: Live Market Ticker & Bridge Trigger -->
+      <div class="hidden md:flex items-center gap-4 bg-slate-900/80 border border-slate-800/90 rounded-full px-4 py-1.5 text-xs font-mono cursor-pointer hover:border-cyan-500/50 transition group" onclick="openBridgeModal()" title="Click to configure Bridge / Cloudflare Tunnel">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle" id="nav-pulse-dot"></span>
-          <span id="nav-terminal-conn" class="text-slate-300 font-bold">CONNECTING...</span>
+          <span id="nav-terminal-conn" class="text-slate-300 font-bold group-hover:text-cyan-400 transition">CONNECTING...</span>
         </div>
         <div class="h-3 w-px bg-slate-800"></div>
         <div class="flex items-center gap-1.5">
@@ -794,6 +799,87 @@
     </div>
   </div>
 
+  <!-- ========================================================================= -->
+  <!-- BRIDGE & TELEMETRY TUNNEL CONFIGURATION MODAL -->
+  <!-- ========================================================================= -->
+  <div id="bridge-config-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4 text-xs font-mono">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span class="text-cyan-400">⚡</span> Execution Bridge & Telemetry Config
+        </h3>
+        <button onclick="closeBridgeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-slate-400 mb-1.5 text-[11px] font-bold">BRIDGE API ENDPOINT (FASTAPI / TUNNEL URL)</label>
+          <input 
+            type="text" 
+            id="bridge-endpoint-input" 
+            placeholder="http://127.0.0.1:8000 or https://xxxx.trycloudflare.com" 
+            class="w-full bg-[#080b14] border border-slate-800 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-400 font-mono text-xs"
+          />
+          <p class="text-[10px] text-slate-500 mt-1">
+            When accessed over HTTPS on www.bluexacedamy.space, use a secure tunnel (e.g. Cloudflare Tunnel).
+          </p>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="flex items-center gap-2 pt-1">
+          <button type="button" onclick="setBridgePreset('http://127.0.0.1:8000')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-bold">
+            Localhost (127.0.0.1:8000)
+          </button>
+          <button type="button" onclick="setBridgePreset('https://www.bluexacedamy.space/api')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-bold">
+            Production Gateway
+          </button>
+        </div>
+
+        <!-- Ping Probe Result Card -->
+        <div id="bridge-ping-result" class="p-3 rounded-lg bg-[#080b14] border border-slate-800 hidden space-y-1 text-[11px]">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Connection Status:</span>
+            <span id="bridge-ping-status" class="font-bold"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Latency / Round-trip:</span>
+            <span id="bridge-ping-latency" class="font-bold text-white"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Active MT5 Account:</span>
+            <span id="bridge-ping-account" class="font-bold text-amber-400"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">XAU/USD Market Price:</span>
+            <span id="bridge-ping-tick" class="font-bold text-cyan-400"></span>
+          </div>
+        </div>
+
+        <!-- Tunnel Instruction Accordion -->
+        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800/80 space-y-2 text-[11px]">
+          <span class="font-bold text-amber-400 block">🚇 Cloudflare Secure Tunnel Helper:</span>
+          <p class="text-slate-400 text-[10px]">
+            To connect remote browser sessions to your MT5 workstation, launch the pre-packaged tunnel:
+          </p>
+          <code class="block bg-[#080b14] p-2 rounded border border-slate-800 text-cyan-400 select-all text-[10px]">
+            cloudflared.exe tunnel --url http://127.0.0.1:8000
+          </code>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2 border-t border-slate-800">
+        <button type="button" onclick="testBridgeConnection()" id="btn-ping-bridge" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold transition flex items-center justify-center gap-1.5">
+          <span>⚡ Ping Bridge</span>
+        </button>
+        <button type="button" onclick="saveBridgeConfig()" class="flex-1 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition">
+          Save & Apply
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Notification Toast -->
   <div id="toast" class="fixed bottom-6 right-6 z-50 bg-[#0c101d] border border-amber-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl font-mono text-xs hidden flex items-center gap-2"></div>
 
@@ -871,6 +957,90 @@
 
     function openMT5Guide() { document.getElementById('mt5-guide-modal').classList.remove('hidden'); }
     function closeMT5Guide() { document.getElementById('mt5-guide-modal').classList.add('hidden'); }
+
+    function openBridgeModal() {
+      const modal = document.getElementById('bridge-config-modal');
+      const input = document.getElementById('bridge-endpoint-input');
+      const currentUrl = localStorage.getItem('bluex_bridge_url') || (
+        (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+          ? 'http://127.0.0.1:8000'
+          : 'http://127.0.0.1:8000'
+      );
+      if (input) input.value = currentUrl;
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeBridgeModal() {
+      const modal = document.getElementById('bridge-config-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function setBridgePreset(url) {
+      const input = document.getElementById('bridge-endpoint-input');
+      if (input) input.value = url;
+    }
+
+    async function testBridgeConnection() {
+      const input = document.getElementById('bridge-endpoint-input');
+      const resultCard = document.getElementById('bridge-ping-result');
+      const statusEl = document.getElementById('bridge-ping-status');
+      const latencyEl = document.getElementById('bridge-ping-latency');
+      const accountEl = document.getElementById('bridge-ping-account');
+      const tickEl = document.getElementById('bridge-ping-tick');
+      const btn = document.getElementById('btn-ping-bridge');
+
+      if (!input || !resultCard) return;
+      const targetUrl = input.value.trim().replace(/\/+$/, '');
+
+      btn.disabled = true;
+      btn.textContent = "Testing...";
+      resultCard.classList.remove('hidden');
+      statusEl.textContent = "Testing connectivity...";
+      statusEl.className = "text-amber-400 font-bold";
+
+      const t0 = performance.now();
+      try {
+        const res = await fetch(`${targetUrl}/api/state`, { signal: AbortSignal.timeout(4000) });
+        const latency = Math.round(performance.now() - t0);
+        if (res.ok) {
+          const d = await res.json();
+          statusEl.textContent = "ONLINE (Verified)";
+          statusEl.className = "text-emerald-400 font-bold";
+          latencyEl.textContent = `${latency} ms`;
+          accountEl.textContent = d.account ? `#${d.account.login} (${d.account.broker})` : "None";
+          tickEl.textContent = d.tick ? `${d.tick.bid.toFixed(2)} / ${d.tick.ask.toFixed(2)} (Spread: ${d.tick.spread_points} pts)` : "N/A";
+          showToast(`Bridge responsive (${latency}ms)`);
+        } else {
+          statusEl.textContent = `HTTP ${res.status} Error`;
+          statusEl.className = "text-rose-400 font-bold";
+          latencyEl.textContent = `${latency} ms`;
+        }
+      } catch (e) {
+        statusEl.textContent = "OFFLINE / Blocked by browser (Mixed Content or Private Network)";
+        statusEl.className = "text-rose-400 font-bold";
+        latencyEl.textContent = "Timeout / Error";
+        accountEl.textContent = "Unavailable";
+        tickEl.textContent = "Unavailable";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "⚡ Ping Bridge";
+      }
+    }
+
+    function saveBridgeConfig() {
+      const input = document.getElementById('bridge-endpoint-input');
+      if (!input) return;
+      const targetUrl = input.value.trim().replace(/\/+$/, '');
+      if (targetUrl) {
+        localStorage.setItem('bluex_bridge_url', targetUrl);
+        showToast("Bridge URL configured: " + targetUrl);
+      } else {
+        localStorage.removeItem('bluex_bridge_url');
+        showToast("Reset to default bridge routing.");
+      }
+      closeBridgeModal();
+      refreshState();
+    }
 
     // Toggle Auto BE @ +2RR
     async function toggleAutoBE() {
