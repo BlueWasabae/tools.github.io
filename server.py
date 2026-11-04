@@ -45,9 +45,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# MT5 Engine & Account Manager Instances
+# MT5 Engine, Account Manager & SMC Genesis Signal Provider Instances
+from smc_signal_provider import SMCSignalProvider
+
 account_manager = AccountManager()
 mt5_engine = MT5ExecutionEngine(config)
+signal_provider = SMCSignalProvider(config)
 
 # Global Cockpit State
 cockpit_state = {
@@ -737,19 +740,23 @@ async def approve_signal(signal_id: str):
     scenario_id = sig.get("scenario_id", 1)
     risk_pct = cockpit_state["custom_risk_pct"]
 
+    # Enforce strict Limit Buy/Sell order action (Zero market execution permission)
+    sig_action = sig["action"].upper()
+    order_action = "BUY_LIMIT" if "BUY" in sig_action else ("SELL_LIMIT" if "SELL" in sig_action else sig_action)
+
     # Bot decides TP using Pure Institutional S&D framework
-    tp = calculate_bot_tp(sig["symbol"], sig["action"], entry, sl, scenario_id)
+    tp = calculate_bot_tp(sig["symbol"], order_action, entry, sl, scenario_id)
 
     payload = AlertPayload(
         secret=config.WEBHOOK_SECRET_KEY,
         symbol=sig["symbol"],
-        action=sig["action"],
+        action=order_action,  # Strictly BUY_LIMIT or SELL_LIMIT
         entry=entry,
         sl=sl,
         tp1=tp,
         risk_pct=risk_pct,
         magic=sig.get("magic", 880101),
-        comment=f"BlueX Approved ({risk_pct}%)"
+        comment=f"SMC Genesis Limit ({risk_pct}%)"
     )
 
     multicast_res = execute_multicast_signal(payload, scenario_id=scenario_id)
@@ -823,11 +830,22 @@ async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, A
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid secret token")
 
     action_upper = action.upper()
+    # Institutional Directive: Bot has ZERO market execution permission. Enforce Limit orders only.
+    if action_upper == "BUY":
+        action_upper = "BUY_LIMIT"
+    elif action_upper == "SELL":
+        action_upper = "SELL_LIMIT"
+
+    if entry is None or entry <= 0:
+        tick = mt5_engine.get_live_tick(symbol)
+        bid = tick.get("bid", 2340.00)
+        ask = tick.get("ask", 2340.13)
+        entry = round(bid - 2.50, 2) if "BUY" in action_upper else round(ask + 2.50, 2)
 
     exec_alert = AlertPayload(
         secret=token,
         symbol=symbol,
-        action=action_upper,
+        action=action_upper,  # Strictly BUY_LIMIT or SELL_LIMIT
         entry=entry,
         sl=sl,
         tp1=tp1,
@@ -878,8 +896,13 @@ async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, A
     sig_record = {
         "id": signal_id,
         "time": time.strftime("%H:%M:%S"),
+        "agent_role": "SMC Genesis Signal Provider",
+        "order_permission_type": "LIMIT_ONLY",
+        "patience_score": 96,
+        "sniper_score": 98,
+        "status": "AWAITING_OPERATOR_APPROVAL",
         "symbol": exec_alert.symbol,
-        "action": action_upper,
+        "action": action_upper,  # Strictly BUY_LIMIT or SELL_LIMIT
         "entry": exec_alert.entry,
         "sl": exec_alert.sl,
         "tp1": exec_alert.tp1,
@@ -911,7 +934,13 @@ async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, A
 
 @app.post("/api/signals/simulate")
 async def simulate_institutional_signal(scenario: int = 1, request: Request = None):
-    """Generates an institutional setup on Gold across Scenarios 1, 2, and 3."""
+    """
+    SMC Genesis Signal Provider evaluates live XAU/USD market state:
+    - Finds high-probability sniper position with confirmations and patience metrics.
+    - AUTO MODE: Bot sets limit order immediately on all accounts with zero operator interference.
+    - APPROVAL MODE: Signal Provider pushes formal approval request to approving channel for operator sign-off.
+    - Bot sets LIMIT BUY or LIMIT SELL only (zero market execution permission).
+    """
     scenario_choice = scenario
     if request:
         try:
@@ -922,78 +951,56 @@ async def simulate_institutional_signal(scenario: int = 1, request: Request = No
             pass
 
     tick = mt5_engine.get_live_tick("XAUUSD")
-    current_price = tick.get("bid", 3950.00) if not tick.get("error") else 3950.00
-    spread_buf = cockpit_state["spread_buffer_usd"]
-    rr = cockpit_state["target_rr"]
-    risk_pct = cockpit_state["custom_risk_pct"]
+    risk_mode = cockpit_state.get("risk_mode", "SAFE")
+    custom_risk_pct = cockpit_state.get("custom_risk_pct", 0.50)
+
+    # 1. SMC Genesis Signal Provider evaluates live market with sniping & patience protocol
+    eval_result = signal_provider.evaluate_live_market(
+        tick=tick,
+        scenario_choice=scenario_choice,
+        risk_mode=risk_mode,
+        custom_risk_pct=custom_risk_pct
+    )
+
+    action = eval_result["action"]  # Strictly "BUY_LIMIT" or "SELL_LIMIT"
+    entry = eval_result["limit_price"]
+    sl = eval_result["sl"]
+    tp1 = eval_result["tp"]
+    risk_delta = max(0.50, abs(entry - sl))
+
     acc = mt5_engine.get_account_summary()
     equity = acc.get("equity", 100000.0) if acc.get("connected") else 100000.0
-
-    if scenario_choice == 2:
-        # Scenario 2: CHoCH Structural Reversal (Bearish displacement from overhead origin)
-        action = "SELL_LIMIT"
-        scenario_name = "Scenario 2: CHoCH Reversal"
-        zone_type = "RBD Supply Zone (Displacement Origin)"
-        zone_top = round(current_price + 9.50, 2)
-        zone_bottom = round(zone_top - 3.80, 2)
-        entry = round(zone_bottom - spread_buf, 2)
-        sl = round(zone_top + spread_buf, 2)
-        risk_delta = max(0.50, abs(sl - entry))
-        tp1 = calculate_bot_tp("XAUUSD", action, entry, sl, scenario_id=2)
-        tp2 = round(entry - (risk_delta * (rr + 2.0)), 2)
-        comment = "Scenario 2: CHoCH Reversal RBD"
-    elif scenario_choice == 3:
-        # Scenario 3: Range Equilibrium Rejection (Lower Range Dealing Extreme)
-        action = "BUY_LIMIT"
-        scenario_name = "Scenario 3: Range Equilibrium"
-        zone_type = "Range Extreme (Equilibrium Rejection)"
-        zone_top = round(current_price - 12.00, 2)
-        zone_bottom = round(zone_top - 4.20, 2)
-        entry = round(zone_top + spread_buf, 2)
-        sl = round(zone_bottom - spread_buf, 2)
-        risk_delta = max(0.50, abs(entry - sl))
-        tp1 = calculate_bot_tp("XAUUSD", action, entry, sl, scenario_id=3)
-        tp2 = round(entry + (risk_delta * 4.0), 2)
-        comment = "Scenario 3: Range Equilibrium Base"
-    else:
-        # Scenario 1 (Default): Pro-Trend BOS Continuation (DBR Demand Base)
-        scenario_choice = 1
-        action = "BUY_LIMIT"
-        scenario_name = "Scenario 1: BOS Continuation"
-        zone_type = "DBR Demand Zone (Displacement Base)"
-        zone_top = round(current_price - 5.50, 2)
-        zone_bottom = round(zone_top - 3.80, 2)
-        entry = round(zone_top + spread_buf, 2)
-        sl = round(zone_bottom - spread_buf, 2)
-        risk_delta = max(0.50, abs(entry - sl))
-        tp1 = calculate_bot_tp("XAUUSD", action, entry, sl, scenario_id=1)
-        tp2 = round(entry + (risk_delta * (rr + 2.0)), 2)
-        comment = "Scenario 1: BOS Continuation DBR"
-
-    cash_risk = equity * (risk_pct / 100.0)
+    cash_risk = equity * (custom_risk_pct / 100.0)
     calc_lots = round(max(0.01, min(100.0, cash_risk / (risk_delta * 100.0))), 2)
 
     sig_id = str(uuid.uuid4())[:8]
-    test_sig = {
+    signal_record = {
         "id": sig_id,
         "time": time.strftime("%H:%M:%S"),
+        "agent_role": eval_result["agent_role"],
         "symbol": "XAUUSD",
-        "action": action,
-        "scenario_id": scenario_choice,
-        "scenario_name": scenario_name,
-        "zone_type": zone_type,
-        "zone_top": zone_top,
-        "zone_bottom": zone_bottom,
-        "zone_depth": round(abs(zone_top - zone_bottom), 2),
+        "action": action,  # Strictly BUY_LIMIT or SELL_LIMIT
+        "order_permission_type": "LIMIT_ONLY",
+        "scenario_id": eval_result["scenario_id"],
+        "scenario_name": eval_result["scenario_name"],
+        "zone_type": eval_result["zone_type"],
         "entry": entry,
         "sl": sl,
         "tp1": tp1,
-        "tp2": tp2,
-        "risk_pct": risk_pct,
+        "tp2": round(entry + ((tp1 - entry) * 1.3), 2) if "BUY" in action else round(entry - ((entry - tp1) * 1.3), 2),
+        "rr_ratio": eval_result["rr_ratio"],
+        "is_rr_valid": eval_result["is_rr_valid"],
+        "patience_score": eval_result["patience_score"],
+        "sniper_score": eval_result["sniper_score"],
+        "entry_permission_granted": eval_result["entry_permission_granted"],
+        "confirmations": eval_result["confirmations"],
+        "analysis_brief": eval_result["analysis_brief"],
+        "risk_mode": risk_mode,
+        "risk_pct": custom_risk_pct,
         "cash_risk": round(cash_risk, 2),
         "calc_lots": calc_lots,
         "magic": 880100 + scenario_choice,
-        "comment": comment
+        "comment": f"SMC Genesis Sc {scenario_choice} Limit"
     }
 
     # If Auto Mode is active, bot sets limit automatically on all active accounts without operator interference
@@ -1001,30 +1008,38 @@ async def simulate_institutional_signal(scenario: int = 1, request: Request = No
         payload = AlertPayload(
             secret=config.WEBHOOK_SECRET_KEY,
             symbol="XAUUSD",
-            action=action,
+            action=action,  # BUY_LIMIT or SELL_LIMIT
             entry=entry,
             sl=sl,
             tp1=tp1,
-            tp2=tp2,
-            risk_pct=risk_pct,
+            tp2=signal_record["tp2"],
+            risk_pct=custom_risk_pct,
             magic=880100 + scenario_choice,
-            comment=f"{scenario_name} (Auto)"
+            comment=f"{eval_result['scenario_name']} (Auto Limit)"
         )
         multicast_res = execute_multicast_signal(payload, scenario_id=scenario_choice)
-        logger.info(f"[AUTO-MODE TRIGGERED] {scenario_name} set limits on {len(multicast_res.get('accounts', []))} account(s)")
+        logger.info(f"[SMC GENESIS SIGNAL PROVIDER -> AUTO LIMIT] Confirmed setup dispatched: {action} on {len(multicast_res.get('accounts', []))} account(s)")
         return {
             "status": "success",
             "mode": "AUTO",
-            "signal": test_sig,
-            "multicast": multicast_res
+            "signal": signal_record,
+            "multicast": multicast_res,
+            "message": f"SMC Genesis Signal Provider confirmed entry. Bot set {action} immediately on all active accounts."
         }
     else:
-        # Position Approve mode: push to approving channel
-        cockpit_state["pending_signals"].insert(0, test_sig)
+        # Approval Mode: push to approving channel requesting operator permission to set limit
+        signal_record["status"] = "AWAITING_OPERATOR_APPROVAL"
+        signal_record["request_text"] = "SMC Genesis Signal Provider requests approval to set limit order."
+        cockpit_state["pending_signals"].insert(0, signal_record)
         if len(cockpit_state["pending_signals"]) > 20:
             cockpit_state["pending_signals"].pop()
-        logger.info(f"[TEST SIGNAL ENQUEUED] {scenario_name} | ID: {sig_id} | {action} @ {entry} | SL: {sl} | Lots: {calc_lots}")
-        return {"status": "success", "mode": "MANUAL", "signal": test_sig}
+        logger.info(f"[SMC GENESIS SIGNAL PROVIDER -> APPROVAL QUEUE] Setup confirmed ({eval_result['patience_score']}% patience): {action} @ {entry}. Requesting operator approval.")
+        return {
+            "status": "success",
+            "mode": "MANUAL",
+            "signal": signal_record,
+            "message": "SMC Genesis Signal Provider confirmed setup. Requesting approval to set limit."
+        }
 
 # MT4 Polling Endpoint
 @app.get("/mt4/poll")

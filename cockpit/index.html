@@ -806,27 +806,44 @@
           <!-- Signal Approval Queue (Positions Approve) -->
           <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl" id="signals-queue-panel">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800/80 mb-3 gap-2.5">
-              <div class="flex items-center gap-2">
-                <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
-                <h3 class="text-base font-bold text-white">Signal Approval Queue</h3>
-                <span id="badge-pending-count" class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
-                  0 PENDING
-                </span>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></div>
+                  <h3 class="text-base font-bold text-white tracking-tight">SMC Genesis Signal Provider Queue</h3>
+                  <span id="badge-pending-count" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold">
+                    0 PENDING
+                  </span>
+                  <span class="px-2 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
+                    LIMIT ORDERS ONLY
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400 font-mono mt-0.5">
+                  Institutional Sniping Agent: Market execution prohibited. Sets BUY_LIMIT / SELL_LIMIT upon confirmations.
+                </p>
               </div>
               
               <!-- Quick Scenario Triggers -->
               <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="text-[10px] font-mono text-slate-500 hidden sm:inline">GENERATE:</span>
-                <button onclick="triggerScenarioSignal(1)" class="px-2 py-1 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Generate Scenario 1: BOS Continuation">
-                  + Sc 1 (BOS)
+                <span class="text-[10px] font-mono text-slate-500 hidden sm:inline">SNIPE:</span>
+                <button onclick="triggerScenarioSignal(1)" class="px-2 py-1 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Snipe Scenario 1: Counter-Trend Sweep">
+                  + Sc 1 (Sweep)
                 </button>
-                <button onclick="triggerScenarioSignal(2)" class="px-2 py-1 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Generate Scenario 2: CHoCH Reversal">
+                <button onclick="triggerScenarioSignal(2)" class="px-2 py-1 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Snipe Scenario 2: Structure Refinement">
                   + Sc 2 (CHoCH)
                 </button>
-                <button onclick="triggerScenarioSignal(3)" class="px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Generate Scenario 3: Range Rejection">
+                <button onclick="triggerScenarioSignal(3)" class="px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Snipe Scenario 3: Range Equilibrium">
                   + Sc 3 (Range)
                 </button>
               </div>
+            </div>
+
+            <!-- Dynamic Execution Protocol Banner -->
+            <div id="execution-mode-protocol-banner" class="mb-3 p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] font-mono flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                <span class="text-slate-300 font-semibold" id="exec-banner-text">🛡️ APPROVAL MODE: Signal Provider requests operator approval before bot sets limit orders.</span>
+              </div>
+              <span class="text-[10px] text-slate-500 uppercase font-mono hidden sm:inline">ALL ACCOUNTS PARALLEL</span>
             </div>
 
             <!-- Scenario Filter Pills Strip -->
@@ -836,7 +853,7 @@
                 ALL
               </button>
               <button onclick="setScenarioFilter(1)" id="btn-filter-1" class="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-cyan-400 flex-shrink-0 transition">
-                SCENARIO 1 (BOS)
+                SCENARIO 1 (SWEEP)
               </button>
               <button onclick="setScenarioFilter(2)" id="btn-filter-2" class="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-purple-400 flex-shrink-0 transition">
                 SCENARIO 2 (CHOCH)
@@ -1407,14 +1424,26 @@
 
     function setExecutionMode(mode) {
       currentSettings.execution_mode = mode;
-      document.getElementById('btn-auto-exec').className = mode === 'AUTO' 
-        ? 'py-2.5 px-3 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition'
-        : 'py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
-      document.getElementById('btn-manual-exec').className = mode === 'MANUAL'
-        ? 'py-2.5 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition'
-        : 'py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
+      const autoBtn = document.getElementById('btn-auto-exec');
+      const manualBtn = document.getElementById('btn-manual-exec');
+      if (autoBtn) {
+        autoBtn.className = mode === 'AUTO' 
+          ? 'py-2.5 px-3 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition shadow-sm'
+          : 'py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
+      }
+      if (manualBtn) {
+        manualBtn.className = mode === 'MANUAL'
+          ? 'py-2.5 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition shadow-sm'
+          : 'py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
+      }
+      const banner = document.getElementById('exec-banner-text');
+      if (banner) {
+        banner.textContent = mode === 'AUTO'
+          ? '⚡ AUTO MODE: Bot sets limit order immediately upon Signal Provider confirmation across all connected MT5 accounts.'
+          : '🛡️ APPROVAL MODE: Signal Provider requests operator approval before bot sets limit orders.';
+      }
       syncSettings();
-      showToast(`Execution: ${mode}`);
+      showToast(`Execution Mode: ${mode === 'AUTO' ? 'Auto Limit' : 'Approval Required'}`);
     }
 
     // Trade Style Horizon Management (DAY vs SWING)
@@ -3270,7 +3299,14 @@
     function renderSignalsQueue(signals) {
       const container = document.getElementById('queue-signals-list');
       const badgeCount = document.getElementById('badge-pending-count');
+      const banner = document.getElementById('exec-banner-text');
       latestSignalsQueue = signals || [];
+
+      if (banner) {
+        banner.textContent = currentSettings.execution_mode === 'AUTO'
+          ? '⚡ AUTO MODE: Bot sets limit order immediately upon Signal Provider confirmation across all connected MT5 accounts.'
+          : '🛡️ APPROVAL MODE: Signal Provider requests operator approval before bot sets limit orders.';
+      }
 
       // Filter signals by active scenario filter
       let filtered = latestSignalsQueue;
@@ -3287,24 +3323,35 @@
 
       if (filtered.length === 0) {
         container.innerHTML = `
-          <div class="text-center py-8 text-slate-500 text-xs font-mono">
-            No pending setups matching active filter. Awaiting institutional displacement or select <b>[+ Sc 1 / Sc 2 / Sc 3]</b> above.
+          <div class="text-center py-8 text-slate-500 text-xs font-mono bg-[#080b14] rounded-xl border border-slate-800/80 p-5 space-y-2">
+            <div class="flex items-center justify-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span class="text-slate-300 font-bold uppercase text-[11px]">SMC Genesis Signal Provider Active</span>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Awaiting institutional displacement & mechanical liquidity sweep at structural extremes.
+            </p>
+            <p class="text-[10px] text-slate-500">
+              Bot has zero market execution permissions. Only confirmed Limit Buy / Sell orders will appear here.
+            </p>
           </div>
         `;
         return;
       }
 
       container.innerHTML = filtered.map(s => {
-        const isBuy = s.action.toUpperCase().includes('BUY');
+        const actionStr = (s.action || 'BUY_LIMIT').toUpperCase();
+        const isBuy = actionStr.includes('BUY');
+        const cleanAction = isBuy ? 'BUY_LIMIT' : 'SELL_LIMIT';
         const equity = latestAccountState.equity || 100000.0;
-        const riskPct = currentSettings.custom_risk_pct || 0.50;
-        const cashRisk = equity * (riskPct / 100.0);
+        const riskPct = s.risk_pct || currentSettings.custom_risk_pct || 0.50;
+        const cashRisk = s.cash_risk || (equity * (riskPct / 100.0));
         const riskDelta = Math.abs(s.entry - s.sl);
-        const calcLots = Math.max(0.01, Math.min(100.0, cashRisk / (riskDelta * 100.0))).toFixed(2);
+        const calcLots = s.calc_lots || Math.max(0.01, Math.min(100.0, cashRisk / (riskDelta * 100.0))).toFixed(2);
 
-        const dynamicTP = isBuy 
-          ? (s.entry + (riskDelta * currentSettings.target_rr)).toFixed(2)
-          : (s.entry - (riskDelta * currentSettings.target_rr)).toFixed(2);
+        const dynamicTP = s.tp1 
+          ? s.tp1.toFixed(2)
+          : (isBuy ? (s.entry + (riskDelta * currentSettings.target_rr)).toFixed(2) : (s.entry - (riskDelta * currentSettings.target_rr)).toFixed(2));
 
         const scId = s.scenario_id || (s.comment?.includes('Scenario 2') ? 2 : (s.comment?.includes('Scenario 3') ? 3 : 1));
         const scBadge = scId === 2 
@@ -3314,50 +3361,71 @@
             : '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">SCENARIO 1 • BOS CONTINUATION</span>');
 
         const zoneName = s.zone_type || (isBuy ? "DBR Demand Zone" : "RBD Supply Zone");
+        const patience = s.patience_score || 96;
+        const rrRatio = s.rr_ratio || (riskDelta > 0 ? (Math.abs(parseFloat(dynamicTP) - s.entry) / riskDelta).toFixed(1) : '3.5');
 
         return `
-          <div class="p-3.5 sm:p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-l-4 border-l-emerald-500 border-slate-800' : 'border-l-4 border-l-rose-500 border-slate-800'} space-y-2.5 font-mono text-xs">
-            <div class="flex items-center justify-between flex-wrap gap-1.5">
-              <div class="flex items-center gap-1.5">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}">
-                  ${s.action}
+          <div class="p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-l-4 border-l-emerald-500 border-slate-800' : 'border-l-4 border-l-rose-500 border-slate-800'} space-y-3 font-mono text-xs shadow-lg">
+            
+            <!-- Signal Provider Identity & Action Header -->
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800/80">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2.5 py-1 rounded-md text-[11px] font-black ${isBuy ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}">
+                  ${cleanAction}
                 </span>
                 ${scBadge}
+                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                  🎯 SNIPER CONFIRMED (${patience}% PATIENCE)
+                </span>
               </div>
-              <span class="text-slate-300 font-bold">${s.symbol} • ${s.time}</span>
-              <span class="text-amber-400 font-bold text-xs sm:text-sm">⚡ ${calcLots} LOTS</span>
-            </div>
-
-            <div class="p-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px]">
-              <span class="truncate"><b>Zone:</b> ${zoneName}</span>
-              <span><b>Risk:</b> $${cashRisk.toFixed(2)} (${riskPct}%)</span>
-            </div>
-
-            <div class="grid grid-cols-4 gap-1 sm:gap-2 p-2 rounded bg-slate-950/70 border border-slate-800/60 text-center">
-              <div>
-                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">ENTRY</span>
-                <span class="font-bold text-cyan-400 text-[11px] sm:text-xs">${s.entry.toFixed(2)}</span>
-              </div>
-              <div>
-                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">STOP LOSS (SL)</span>
-                <span class="font-bold text-rose-400 text-[11px] sm:text-xs">${s.sl.toFixed(2)}</span>
-              </div>
-              <div>
-                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">TARGET</span>
-                <span class="font-bold text-emerald-400 text-[11px] sm:text-xs">${dynamicTP}</span>
-              </div>
-              <div>
-                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">LOTS</span>
-                <span class="font-bold text-amber-400 text-[11px] sm:text-xs">${calcLots}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400 font-bold text-xs">${s.symbol} • ${s.time}</span>
+                <span class="text-amber-400 font-bold text-xs sm:text-sm">⚡ ${calcLots} LOTS</span>
               </div>
             </div>
 
+            <!-- Agent Role & Strategy Origin -->
+            <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1.5 text-[10px] sm:text-[11px]">
+              <div class="flex items-center justify-between">
+                <span class="text-cyan-400 font-bold flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                  SMC Genesis Signal Provider
+                </span>
+                <span class="text-slate-400">Risk: <b>$${Number(cashRisk).toFixed(2)} (${riskPct}%)</b></span>
+              </div>
+              <p class="text-slate-300 text-[10px] leading-relaxed">
+                ${s.analysis_brief || `Institutional ${zoneName} confirmed by candle-body displacement. Awaiting limit pull. Pure S&D Invalidation protected.`}
+              </p>
+            </div>
+
+            <!-- Invalidation & Target Grid -->
+            <div class="grid grid-cols-4 gap-1.5 sm:gap-2 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 text-center">
+              <div>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">LIMIT ENTRY</span>
+                <span class="font-extrabold text-cyan-400 text-xs sm:text-sm">${s.entry.toFixed(2)}</span>
+              </div>
+              <div>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">INVALIDATION (SL)</span>
+                <span class="font-extrabold text-rose-400 text-xs sm:text-sm">${s.sl.toFixed(2)}</span>
+              </div>
+              <div>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">TARGET (1:${rrRatio} RR)</span>
+                <span class="font-extrabold text-emerald-400 text-xs sm:text-sm">${dynamicTP}</span>
+              </div>
+              <div>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">DISPATCH LOTS</span>
+                <span class="font-extrabold text-amber-400 text-xs sm:text-sm">${calcLots} L</span>
+              </div>
+            </div>
+
+            <!-- Direct Operator Action Controls -->
             <div class="flex items-center gap-2 pt-1">
-              <button onclick="approveSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition shadow-md shadow-emerald-500/20 text-xs active:scale-95">
-                ✅ APPROVE
+              <button onclick="approveSignal('${s.id}')" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-black font-extrabold transition shadow-lg shadow-emerald-500/25 text-xs active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span>APPROVE & SET LIMIT (ALL ACCOUNTS)</span>
               </button>
-              <button onclick="declineSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 font-bold transition text-xs active:scale-95">
-                ❌ DECLINE
+              <button onclick="declineSignal('${s.id}')" class="py-2.5 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 font-bold transition text-xs active:scale-95 cursor-pointer">
+                DECLINE
               </button>
             </div>
           </div>

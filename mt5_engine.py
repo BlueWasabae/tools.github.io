@@ -298,31 +298,35 @@ class MT5ExecutionEngine:
             "tp": float(tp),
             "deviation": self.config.MAX_SLIPPAGE_POINTS,
             "magic": payload.magic or self.config.MAGIC_NUMBER_BASE,
-            "comment": payload.comment[:31] if payload.comment else "BlueX S&D Execution",
+            "comment": payload.comment[:31] if payload.comment else "BlueX S&D Limit",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC
+            "type_filling": mt5.ORDER_FILLING_RETURN
         }
 
-        if action_upper == "BUY":
-            request["action"] = mt5.TRADE_ACTION_DEAL
-            request["type"] = mt5.ORDER_TYPE_BUY
-            request["price"] = tick.ask
-        elif action_upper == "SELL":
-            request["action"] = mt5.TRADE_ACTION_DEAL
-            request["type"] = mt5.ORDER_TYPE_SELL
-            request["price"] = tick.bid
-        elif action_upper == "BUY_LIMIT":
+        # ENFORCED INSTITUTIONAL POLICY: Bot does NOT have permission to execute the market directly.
+        # It sets pending limit buy or limit sell orders only.
+        if action_upper in ["BUY", "BUY_LIMIT"]:
+            if entry is None or float(entry) <= 0:
+                return {
+                    "status": "rejected",
+                    "message": "Market execution blocked: Bot has Limit Buy/Sell permissions only. Refined Limit Entry required."
+                }
             request["action"] = mt5.TRADE_ACTION_PENDING
             request["type"] = mt5.ORDER_TYPE_BUY_LIMIT
             request["price"] = float(entry)
-            request["type_filling"] = mt5.ORDER_FILLING_RETURN
-        elif action_upper == "SELL_LIMIT":
+            action_upper = "BUY_LIMIT"
+        elif action_upper in ["SELL", "SELL_LIMIT"]:
+            if entry is None or float(entry) <= 0:
+                return {
+                    "status": "rejected",
+                    "message": "Market execution blocked: Bot has Limit Buy/Sell permissions only. Refined Limit Entry required."
+                }
             request["action"] = mt5.TRADE_ACTION_PENDING
             request["type"] = mt5.ORDER_TYPE_SELL_LIMIT
             request["price"] = float(entry)
-            request["type_filling"] = mt5.ORDER_FILLING_RETURN
+            action_upper = "SELL_LIMIT"
         else:
-            return {"status": "error", "message": f"Unsupported action type: {action_upper}"}
+            return {"status": "error", "message": f"Unsupported or prohibited action: {action_upper}. Bot sets Limit Buy or Sell only."}
 
         result = mt5.order_send(request)
         if result is None:
