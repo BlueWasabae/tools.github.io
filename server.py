@@ -485,6 +485,7 @@ async def reject_signal(signal_id: str):
 # ==============================================================================
 
 @app.post("/webhook")
+@app.post("/api/webhook")
 async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, AlertPayload], request: Request):
     """
     Primary ingress for TradingView alerts, SMC Genesis Institutional Engine, and BlueX Market Scanner.
