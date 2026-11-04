@@ -1,20 +1,12 @@
 //@version=5
-indicator("BlueX SMC Genesis Structural & S&D Indicator [XAU/USD]", 
-          shorttitle="BlueX SMC Genesis", 
-          overlay=true, 
-          max_bars_back=500,
-          max_boxes_count=500, 
-          max_lines_count=500, 
-          max_labels_count=500)
+indicator("BlueX SMC Genesis Structural & S&D Indicator [XAU/USD]", shorttitle="BlueX SMC Genesis", overlay=true, max_bars_back=500, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
 
 // ==============================================================================
 // 1. INPUT CONFIGURATION & OPERATIONAL HIERARCHY
 // ==============================================================================
 string G_MODE     = "Trading Architecture & Timeframe Hierarchy"
-string i_mode     = input.string("Day Trade (M15 / M3)", "Operational Mode", 
-                     options=["Day Trade (M15 / M3)", "Swing Trade (H4 / H1 / M15)"], group=G_MODE)
-int    i_pivotLen = input.int(5, "Swing Pivot Strength (V-Shape Length)", minval=2, maxval=20, group=G_MODE,
-                     tooltip="Number of bars left and right required to validate structural V-shape swing highs and lows.")
+string i_mode     = input.string("Day Trade (M15 / M3)", "Operational Mode", options=["Day Trade (M15 / M3)", "Swing Trade (H4 / H1 / M15)"], group=G_MODE)
+int    i_pivotLen = input.int(5, "Swing Pivot Strength (V-Shape Length)", minval=2, maxval=20, group=G_MODE, tooltip="Number of bars left and right required to validate structural V-shape swing highs and lows.")
 
 string G_ALERT    = "BlueX Execution Bridge & Webhook Gateway"
 string i_secret   = input.string("BLUEX_QUANT_SECURE_TOKEN_9981", "Webhook Secret Key", group=G_ALERT)
@@ -23,8 +15,7 @@ float  i_riskPct  = input.float(1.0, "Execution Risk %", minval=0.1, maxval=3.0,
 string G_VIS      = "Structural Visibility & Engine Elements"
 bool   i_showBOS  = input.bool(true, "Show BOS (Break of Structure - Trend Continuation)", group=G_VIS)
 bool   i_showIBOS = input.bool(true, "Show iBOS (Internal Break of Structure)", group=G_VIS)
-bool   i_showFT   = input.bool(true, "Show FT (Failure to Traverse - Micro Break, M15+ Only)", group=G_VIS,
-                     tooltip="Failure to Traverse (FT) represents internal breaks within an iBOS move. Strictly deactivated on M3.")
+bool   i_showFT   = input.bool(true, "Show FT (Failure to Traverse - Micro Break, M15+ Only)", group=G_VIS, tooltip="Failure to Traverse (FT) represents internal breaks within an iBOS move. Strictly deactivated on M3.")
 bool   i_showSD   = input.bool(true, "Show Institutional Supply & Demand Zones (Zone Candle Model)", group=G_VIS)
 bool   i_showHTF  = input.bool(true, "Show Multi-Timeframe HTF Anchors", group=G_VIS)
 bool   i_showHUD  = input.bool(true, "Display Institutional Telemetry HUD Table", group=G_VIS)
@@ -51,8 +42,7 @@ bool canDrawFT = not isM3 and i_showFT
 // Resolve HTF string based on selected operational mode
 string htfTf1 = i_mode == "Day Trade (M15 / M3)" ? "15" : "60"
 string htfTf2 = i_mode == "Day Trade (M15 / M3)" ? "60" : "240"
-string currentTfStr = timeframe.isminutes ? str.tostring(timeframe.multiplier) + "M" : 
-                      timeframe.isdaily ? "D" : timeframe.period
+string currentTfStr = timeframe.isminutes ? str.tostring(timeframe.multiplier) + "M" : timeframe.isdaily ? "D" : timeframe.period
 
 // ==============================================================================
 // 3. USER DEFINED TYPES (UDTs)
@@ -150,32 +140,14 @@ if isConfirmed
         lastBreakBar := bar_index
 
         // Visual Line & Label Drawing
-        bool allowDraw = (breakType == "BOS" and i_showBOS) or 
-                         (breakType == "iBOS" and i_showIBOS) or 
-                         (breakType == "FT" and canDrawFT)
+        bool allowDraw = (breakType == "BOS" and i_showBOS) or (breakType == "iBOS" and i_showIBOS) or (breakType == "FT" and canDrawFT)
 
         if allowDraw
-            lineStyle = breakType == "BOS" ? line.style_solid : 
-                        breakType == "iBOS" ? line.style_dashed : line.style_dotted
+            lineStyle = breakType == "BOS" ? line.style_solid : breakType == "iBOS" ? line.style_dashed : line.style_dotted
             lineWidth = breakType == "BOS" ? 2 : 1
             
-            line.new(
-                x1=activeHighBar, y1=activeHigh, 
-                x2=bar_index, y2=activeHigh, 
-                color=breakColor, 
-                style=lineStyle, 
-                width=lineWidth
-            )
-            
-            label.new(
-                x=int(math.round((activeHighBar + bar_index) / 2)), 
-                y=activeHigh, 
-                text=breakType + " " + currentTfStr, 
-                style=label.style_label_down, 
-                color=color.new(breakColor, 20), 
-                textcolor=color.white, 
-                size=size.tiny
-            )
+            line.new(x1=activeHighBar, y1=activeHigh, x2=bar_index, y2=activeHigh, color=breakColor, style=lineStyle, width=lineWidth)
+            label.new(x=int(math.round((activeHighBar + bar_index) / 2)), y=activeHigh, text=breakType + " " + currentTfStr, style=label.style_label_down, color=color.new(breakColor, 20), textcolor=color.white, size=size.tiny)
 
         // ----------------------------------------------------------------------
         // ZONE CANDLE MODEL: DEMAND ZONE CREATION
@@ -197,26 +169,8 @@ if isConfirmed
             activeZoneTop := dTop
             activeZoneBot := dBot
 
-            box demandBox = box.new(
-                left=activeLowBar, 
-                top=dTop, 
-                right=bar_index + 20, 
-                bottom=dBot, 
-                bgcolor=color.new(c_demand, 85), 
-                border_color=color.new(c_demand, 25), 
-                border_width=1, 
-                border_style=line.style_solid
-            )
-            
-            label demandLbl = label.new(
-                x=bar_index + 10, 
-                y=dTop, 
-                text="DEMAND [" + breakType + "] " + currentTfStr, 
-                style=label.style_label_left, 
-                color=color.new(c_demand, 10), 
-                textcolor=color.white, 
-                size=size.tiny
-            )
+            box demandBox = box.new(left=activeLowBar, top=dTop, right=bar_index + 20, bottom=dBot, bgcolor=color.new(c_demand, 85), border_color=color.new(c_demand, 25), border_width=1, border_style=line.style_solid)
+            label demandLbl = label.new(x=bar_index + 10, y=dTop, text="DEMAND [" + breakType + "] " + currentTfStr, style=label.style_label_left, color=color.new(c_demand, 10), textcolor=color.white, size=size.tiny)
 
             // Enforce maximum active zones buffer
             if array.size(activeZones) >= i_maxZones
@@ -257,32 +211,14 @@ if isConfirmed
         lastBreakBar := bar_index
 
         // Visual Line & Label Drawing
-        bool allowDraw = (breakType == "BOS" and i_showBOS) or 
-                         (breakType == "iBOS" and i_showIBOS) or 
-                         (breakType == "FT" and canDrawFT)
+        bool allowDraw = (breakType == "BOS" and i_showBOS) or (breakType == "iBOS" and i_showIBOS) or (breakType == "FT" and canDrawFT)
 
         if allowDraw
-            lineStyle = breakType == "BOS" ? line.style_solid : 
-                        breakType == "iBOS" ? line.style_dashed : line.style_dotted
+            lineStyle = breakType == "BOS" ? line.style_solid : breakType == "iBOS" ? line.style_dashed : line.style_dotted
             lineWidth = breakType == "BOS" ? 2 : 1
             
-            line.new(
-                x1=activeLowBar, y1=activeLow, 
-                x2=bar_index, y2=activeLow, 
-                color=breakColor, 
-                style=lineStyle, 
-                width=lineWidth
-            )
-            
-            label.new(
-                x=int(math.round((activeLowBar + bar_index) / 2)), 
-                y=activeLow, 
-                text=breakType + " " + currentTfStr, 
-                style=label.style_label_up, 
-                color=color.new(breakColor, 20), 
-                textcolor=color.white, 
-                size=size.tiny
-            )
+            line.new(x1=activeLowBar, y1=activeLow, x2=bar_index, y2=activeLow, color=breakColor, style=lineStyle, width=lineWidth)
+            label.new(x=int(math.round((activeLowBar + bar_index) / 2)), y=activeLow, text=breakType + " " + currentTfStr, style=label.style_label_up, color=color.new(breakColor, 20), textcolor=color.white, size=size.tiny)
 
         // ----------------------------------------------------------------------
         // ZONE CANDLE MODEL: SUPPLY ZONE CREATION
@@ -304,26 +240,8 @@ if isConfirmed
             activeZoneTop := sTop
             activeZoneBot := sBot
 
-            box supplyBox = box.new(
-                left=activeHighBar, 
-                top=sTop, 
-                right=bar_index + 20, 
-                bottom=sBot, 
-                bgcolor=color.new(c_supply, 85), 
-                border_color=color.new(c_supply, 25), 
-                border_width=1, 
-                border_style=line.style_solid
-            )
-            
-            label supplyLbl = label.new(
-                x=bar_index + 10, 
-                y=sBot, 
-                text="SUPPLY [" + breakType + "] " + currentTfStr, 
-                style=label.style_label_left, 
-                color=color.new(c_supply, 10), 
-                textcolor=color.white, 
-                size=size.tiny
-            )
+            box supplyBox = box.new(left=activeHighBar, top=sTop, right=bar_index + 20, bottom=sBot, bgcolor=color.new(c_supply, 85), border_color=color.new(c_supply, 25), border_width=1, border_style=line.style_solid)
+            label supplyLbl = label.new(x=bar_index + 10, y=sBot, text="SUPPLY [" + breakType + "] " + currentTfStr, style=label.style_label_left, color=color.new(c_supply, 10), textcolor=color.white, size=size.tiny)
 
             // Enforce maximum active zones buffer
             if array.size(activeZones) >= i_maxZones
@@ -372,13 +290,7 @@ f_calc_htf_pivots(int pLen) =>
     float pLo = ta.pivotlow(low, pLen, pLen)
     [pHi[1], pLo[1]]
 
-[htf1Hi, htf1Lo] = request.security(
-    syminfo.tickerid, 
-    htfTf1, 
-    f_calc_htf_pivots(i_pivotLen), 
-    barmerge.gaps_off, 
-    barmerge.lookahead_off
-)
+[htf1Hi, htf1Lo] = request.security(syminfo.tickerid, htfTf1, f_calc_htf_pivots(i_pivotLen), barmerge.gaps_off, barmerge.lookahead_off)
 
 var float lastHtf1High = na
 var float lastHtf1Low  = na
@@ -395,30 +307,15 @@ if i_showHTF and barstate.islast
     int startX = math.max(0, bar_index - 60)
     if not na(lastHtf1High)
         line.delete(htfHighLine)
-        htfHighLine := line.new(
-            x1=startX, y1=lastHtf1High, 
-            x2=bar_index + 20, y2=lastHtf1High, 
-            color=color.new(c_supply, 30), 
-            style=line.style_dashed, 
-            width=2
-        )
+        htfHighLine := line.new(x1=startX, y1=lastHtf1High, x2=bar_index + 20, y2=lastHtf1High, color=color.new(c_supply, 30), style=line.style_dashed, width=2)
     if not na(lastHtf1Low)
         line.delete(htfLowLine)
-        htfLowLine := line.new(
-            x1=startX, y1=lastHtf1Low, 
-            x2=bar_index + 20, y2=lastHtf1Low, 
-            color=color.new(c_demand, 30), 
-            style=line.style_dashed, 
-            width=2
-        )
+        htfLowLine := line.new(x1=startX, y1=lastHtf1Low, x2=bar_index + 20, y2=lastHtf1Low, color=color.new(c_demand, 30), style=line.style_dashed, width=2)
 
 // ==============================================================================
 // 8. INSTITUTIONAL HUD & TELEMETRY TABLE
 // ==============================================================================
-var table hudTable = table.new(position.top_right, 2, 7, 
-                     bgcolor=color.new(#030712, 15), 
-                     border_color=color.new(#ffffff, 85), 
-                     border_width=1)
+var table hudTable = table.new(position.top_right, 2, 7, bgcolor=color.new(#030712, 15), border_color=color.new(#ffffff, 85), border_width=1)
 
 if i_showHUD and barstate.islast
     table.cell(hudTable, 0, 0, "BlueX SMC Genesis", bgcolor=color.new(#090e1a, 0), text_color=#f59e0b, text_size=size.small)
@@ -454,8 +351,7 @@ if i_showHUD and barstate.islast
 if isConfirmed and (isBullBreak or isBearBreak)
     string dirStr   = isBullBreak ? "BUY_LIMIT" : "SELL_LIMIT"
     float  entryLvl = isBullBreak ? (not na(activeZoneTop) ? activeZoneTop : close) : (not na(activeZoneBot) ? activeZoneBot : close)
-    float  slLvl    = isBullBreak ? (not na(activeZoneBot) ? activeZoneBot - 1.0 : entryLvl - (ta.atr(14) * 1.5)) : 
-                                    (not na(activeZoneTop) ? activeZoneTop + 1.0 : entryLvl + (ta.atr(14) * 1.5))
+    float  slLvl    = isBullBreak ? (not na(activeZoneBot) ? activeZoneBot - 1.0 : entryLvl - (ta.atr(14) * 1.5)) : (not na(activeZoneTop) ? activeZoneTop + 1.0 : entryLvl + (ta.atr(14) * 1.5))
     float  risk     = math.abs(entryLvl - slLvl)
     float  tp1Lvl   = isBullBreak ? entryLvl + (risk * 3.0) : entryLvl - (risk * 3.0)
 
