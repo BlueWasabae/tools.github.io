@@ -2,11 +2,13 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Sales & Execution • BlueX AdminCN Dashboard</title>
   
   <link rel="icon" type="image/png" href="/assets/images/bluex-3d-logo.png">
   <meta name="theme-color" content="#060911">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -53,6 +55,7 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: #060911;
       color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
     }
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
@@ -63,18 +66,30 @@
 
     /* Custom Scrollbars */
     ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+      width: 4px;
+      height: 4px;
     }
     ::-webkit-scrollbar-track {
       background: #090d18;
     }
     ::-webkit-scrollbar-thumb {
       background: #1e293b;
-      border-radius: 3px;
+      border-radius: 2px;
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
+
+    /* Safe Area Padding for iPhone notch & home bar */
+    .safe-area-bottom {
+      padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+    }
+    .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    /* Prevent mobile input zoom */
+    @media (max-width: 768px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
     }
 
     @keyframes pulse-subtle {
@@ -89,9 +104,14 @@
 <body class="min-h-screen bg-[#060911] text-slate-100 flex overflow-hidden antialiased selection:bg-amber-500 selection:text-black">
 
   <!-- ========================================================================= -->
-  <!-- LEFT SIDEBAR (SHADCN ADMINCN SPECIFICATION) -->
+  <!-- MOBILE SIDEBAR BACKDROP OVERLAY -->
   <!-- ========================================================================= -->
-  <aside id="sidebar" class="w-64 bg-[#090d18] border-r border-slate-800/80 flex flex-col flex-shrink-0 z-30 transition-all duration-300 ease-in-out relative select-none">
+  <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity"></div>
+
+  <!-- ========================================================================= -->
+  <!-- LEFT SIDEBAR (MOBILE DRAWER + DESKTOP STATIC) -->
+  <!-- ========================================================================= -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-[#090d18] border-r border-slate-800/80 flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out select-none shadow-2xl flex-shrink-0">
     
     <!-- Sidebar Header -->
     <div class="h-16 px-4 border-b border-slate-800/80 flex items-center justify-between">
@@ -109,7 +129,7 @@
         </div>
       </a>
       
-      <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800">
+      <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -123,13 +143,13 @@
           Dashboards
         </div>
         <nav class="space-y-1">
-          <a href="/dashboard/sales" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold shadow-sm transition">
+          <a href="/dashboard/sales" onclick="if(window.innerWidth < 1024) toggleSidebar()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold shadow-sm transition">
             <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
             <span>Sales & Execution</span>
             <span class="ml-auto px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/20 text-amber-300 font-bold">PRO</span>
           </a>
 
-          <a href="/journal" target="_blank" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <a href="/journal" target="_blank" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <span>Trading Journal</span>
             <span class="ml-auto text-slate-500 text-[10px]">↗</span>
@@ -143,25 +163,25 @@
           Execution Engine
         </div>
         <nav class="space-y-1">
-          <a href="#holding-positions-section" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <a href="#holding-positions-section" onclick="if(window.innerWidth < 1024) toggleSidebar()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
             <span>Live Held Positions</span>
             <span id="nav-open-badge" class="ml-auto px-1.5 py-0.2 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-400 font-bold">0</span>
           </a>
 
-          <a href="#sales-table-section" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <a href="#sales-table-section" onclick="if(window.innerWidth < 1024) toggleSidebar()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <span>Orders Data Table</span>
             <span class="ml-auto text-[10px] font-mono text-amber-400 font-bold">LIVE</span>
           </a>
 
-          <a href="#signals-queue-panel" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <a href="#signals-queue-panel" onclick="if(window.innerWidth < 1024) toggleSidebar()" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             <span>Signal Queue</span>
             <span id="nav-pending-badge" class="ml-auto px-1.5 py-0.2 rounded text-[10px] font-mono bg-slate-800 text-slate-300">0</span>
           </a>
 
-          <button onclick="openAccountModal()" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <button onclick="openAccountModal(); if(window.innerWidth < 1024) toggleSidebar()" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
             <span>MT5 Accounts</span>
             <span class="ml-auto text-[10px] font-mono text-cyan-400">CONFIG</span>
@@ -175,16 +195,16 @@
           System & Settings
         </div>
         <nav class="space-y-1">
-          <a href="https://www.bluexacademy.site" target="_blank" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <a href="https://www.bluexacademy.site" target="_blank" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             <span>LS Trading Academy</span>
             <span class="ml-auto text-amber-400 text-[10px] font-mono">SITE ↗</span>
           </a>
-          <button onclick="openMT5Guide()" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <button onclick="openMT5Guide(); if(window.innerWidth < 1024) toggleSidebar()" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
             <span>MT5 Bridge Guide</span>
           </button>
-          <button onclick="openBridgeModal()" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
+          <button onclick="openBridgeModal(); if(window.innerWidth < 1024) toggleSidebar()" class="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 text-xs font-medium transition group">
             <svg class="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             <span>Bridge & Tunnel URL</span>
             <span class="ml-auto text-[10px] font-mono text-cyan-400 font-bold">CONFIG</span>
@@ -207,7 +227,7 @@
           <div class="text-xs font-bold text-white truncate" id="sidebar-user-name">bluewasabae</div>
           <div class="text-[10px] text-slate-400 truncate font-mono">Lead Operator</div>
         </div>
-        <button onclick="handleSignOut()" title="Sign Out" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+        <button onclick="handleSignOut()" title="Sign Out" class="text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-slate-800 transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         </button>
       </div>
@@ -220,12 +240,20 @@
   <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
     
     <!-- TOP NAVIGATION BAR (SHADCN ADMINCN HEADER) -->
-    <header class="h-16 px-4 md:px-6 bg-[#090d18]/90 backdrop-blur border-b border-slate-800/80 flex items-center justify-between gap-4 z-20 flex-shrink-0">
+    <header class="h-14 sm:h-16 px-3 sm:px-6 bg-[#090d18]/90 backdrop-blur border-b border-slate-800/80 flex items-center justify-between gap-3 z-20 flex-shrink-0">
       
-      <!-- Left: Mobile Toggle & Breadcrumbs -->
-      <div class="flex items-center gap-3">
-        <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
+      <!-- Left: Mobile Toggle & Mobile Market Ticker -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 transition" title="Open Menu">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+
+        <!-- Compact Mobile Live Ticker Chip (< 768px) -->
+        <button onclick="openBridgeModal()" class="flex md:hidden items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] font-mono cursor-pointer hover:border-cyan-500/50 transition" title="Bridge & Spread Info">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-subtle" id="nav-pulse-dot-mobile"></span>
+          <span class="text-amber-400 font-bold" id="nav-tick-bid-mobile">3949.68</span>
+          <span class="text-slate-600">/</span>
+          <span class="text-cyan-400 text-[10px]" id="nav-tick-spread-mobile">13pt</span>
         </button>
 
         <div class="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400">
@@ -235,7 +263,7 @@
         </div>
       </div>
 
-      <!-- Center: Live Market Ticker & Bridge Trigger -->
+      <!-- Center: Live Market Ticker & Bridge Trigger (Desktop >= 768px) -->
       <div class="hidden md:flex items-center gap-4 bg-slate-900/80 border border-slate-800/90 rounded-full px-4 py-1.5 text-xs font-mono cursor-pointer hover:border-cyan-500/50 transition group" onclick="openBridgeModal()" title="Click to configure Bridge / Cloudflare Tunnel">
         <div class="flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle" id="nav-pulse-dot"></span>
@@ -256,9 +284,9 @@
       </div>
 
       <!-- Right: Controls & Profile -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
         
-        <!-- Multi-Account MT5 Dropdown -->
+        <!-- Multi-Account MT5 Dropdown (Hidden on smallest mobile, in bottom dock) -->
         <div class="hidden sm:flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1">
           <span class="text-[10px] font-mono text-slate-500">ACC:</span>
           <select id="header-account-select" onchange="handleAccountSwitch(this.value)" class="bg-transparent text-xs font-mono text-cyan-400 font-bold outline-none cursor-pointer">
@@ -267,14 +295,14 @@
         </div>
 
         <!-- Journal Button -->
-        <a href="/journal" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+        <a href="/journal" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span class="hidden sm:inline">Journal</span>
         </a>
 
         <!-- User Menu Dropdown Button -->
-        <div class="flex items-center gap-2 pl-2 border-l border-slate-800">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-amber-400 flex items-center justify-center font-bold text-black text-xs shadow-sm">
+        <div class="flex items-center gap-2 pl-1.5 border-l border-slate-800">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-amber-400 flex items-center justify-center font-bold text-black text-xs shadow-sm">
             BW
           </div>
           <div class="hidden xl:flex flex-col text-left">
@@ -289,136 +317,131 @@
     <!-- ======================================================================= -->
     <!-- SCROLLABLE DASHBOARD CONTENT AREA -->
     <!-- ======================================================================= -->
-    <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6">
+    <main class="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 pb-24 lg:pb-8">
       
       <!-- DASHBOARD PAGE HEADER (ADMINCN STYLE) -->
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2">
-            <span>Sales & Quantitative Execution</span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-              ADMINCN SALES
+          <h1 class="text-xl sm:text-2xl font-bold font-display tracking-tight text-white flex items-center gap-2">
+            <span>Sales & Execution</span>
+            <span class="px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              ADMINCN
             </span>
           </h1>
-          <p class="text-xs text-slate-400 font-mono mt-0.5">
+          <p class="text-[11px] sm:text-xs text-slate-400 font-mono mt-0.5">
             Real-time institutional liquidity, deal receipts, and automated MT5 execution desk.
           </p>
         </div>
 
         <!-- Action Toolbar with Auto-BE Toggle Button -->
-        <div class="flex flex-wrap items-center gap-2.5">
-          <!-- Date Range Pill -->
-          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300">
-            <span>📅 Jan 20, 2026 - Feb 09, 2026</span>
-          </div>
-
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
           <!-- AUTO-BE TOGGLE BUTTON (+2RR) -->
           <button 
             id="btn-auto-be-toggle" 
             onclick="toggleAutoBE()" 
-            class="px-3.5 py-1.5 rounded-lg border text-xs font-mono font-bold transition flex items-center gap-2 shadow-sm"
+            class="px-2.5 sm:px-3.5 py-1.5 rounded-lg border text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 sm:gap-2 shadow-sm"
           >
             <span class="w-2 h-2 rounded-full" id="auto-be-dot"></span>
             <span id="auto-be-text">AUTO BE @ +2RR: OFF</span>
           </button>
 
-          <button onclick="generateSimulatedSignal()" class="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+          <button onclick="generateSimulatedSignal()" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             <span>Test Signal</span>
           </button>
 
-          <button onclick="executeMoveBEAll()" class="px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
-            <span>🛡️ BE Move All</span>
+          <button onclick="executeMoveBEAll()" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm">
+            <span>🛡️ BE All</span>
           </button>
 
-          <button onclick="executeEmergencyCloseAll()" class="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+          <button onclick="executeEmergencyCloseAll()" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-sm">
             <span>🚨 Close All</span>
           </button>
         </div>
       </div>
 
       <!-- ===================================================================== -->
-      <!-- 4 TOP METRIC CARDS (SHADCN ADMINCN SALES SPECIFICATION) -->
+      <!-- 4 TOP METRIC CARDS (COMPACT 2x2 ON MOBILE, 4-COL ON DESKTOP) -->
       <!-- ===================================================================== -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         
         <!-- Metric Card 1: Total Revenue / Equity -->
-        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-2">
-            <span class="text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Total Revenue</span>
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-1.5">
+            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Total Revenue</span>
+            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
           </div>
-          <div class="text-2xl font-black font-mono tracking-tight text-white" id="kpi-net-pnl">
+          <div class="text-lg sm:text-2xl font-black font-mono tracking-tight text-white truncate" id="kpi-net-pnl">
             $128,450.00
           </div>
-          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-emerald-400">
+          <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-emerald-400">
             <span class="flex items-center gap-0.5 font-bold">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
               +20.1%
             </span>
-            <span class="text-slate-400">from last month</span>
+            <span class="text-slate-500 hidden sm:inline">from last month</span>
           </div>
         </div>
 
         <!-- Metric Card 2: Executed Deals / Subscriptions -->
-        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-2">
-            <span class="text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Executed Deals</span>
-            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-1.5">
+            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Deals Executed</span>
+            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
             </div>
           </div>
-          <div class="text-2xl font-black font-mono text-white tracking-tight" id="kpi-closed-count">
+          <div class="text-lg sm:text-2xl font-black font-mono text-white tracking-tight truncate" id="kpi-closed-count">
             +2,350
           </div>
-          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-cyan-400">
+          <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-cyan-400">
             <span class="flex items-center gap-0.5 font-bold">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-              +180.1%
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+              +180%
             </span>
-            <span class="text-slate-400">from last month</span>
+            <span class="text-slate-500 hidden sm:inline">from last month</span>
           </div>
         </div>
 
         <!-- Metric Card 3: Turnover Volume (Sales Lots) -->
-        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-2">
-            <span class="text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Sales Volume</span>
-            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-1.5">
+            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Sales Volume</span>
+            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </div>
           </div>
-          <div class="text-2xl font-black font-mono text-amber-400 tracking-tight" id="kpi-volume">
-            12,234 Lots
+          <div class="text-lg sm:text-2xl font-black font-mono text-amber-400 tracking-tight truncate" id="kpi-volume">
+            12,234 L
           </div>
-          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-amber-400">
+          <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-amber-400">
             <span class="flex items-center gap-0.5 font-bold">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
               +19%
             </span>
-            <span class="text-slate-400">from last month</span>
+            <span class="text-slate-500 hidden sm:inline">from last month</span>
           </div>
         </div>
 
         <!-- Metric Card 4: Active Ratio & Win Rate -->
-        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between text-slate-400 mb-2">
-            <span class="text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Active Ratio</span>
-            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-3.5 sm:p-5 shadow-lg relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-1.5">
+            <span class="text-[10px] sm:text-xs font-bold uppercase font-mono tracking-wider text-slate-400">Win Rate</span>
+            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
+              <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
           </div>
-          <div class="text-2xl font-black font-mono text-purple-400 tracking-tight" id="kpi-win-rate">
-            78.6% Win Rate
+          <div class="text-lg sm:text-2xl font-black font-mono text-purple-400 tracking-tight truncate" id="kpi-win-rate">
+            78.6%
           </div>
-          <div class="flex items-center gap-1.5 mt-2 text-xs font-mono text-purple-400">
+          <div class="flex items-center gap-1 mt-1 text-[10px] sm:text-xs font-mono text-purple-400">
             <span class="flex items-center gap-0.5 font-bold">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block mr-1"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block mr-0.5"></span>
               +201
             </span>
-            <span class="text-slate-400">since last week</span>
+            <span class="text-slate-500 hidden sm:inline">trades</span>
           </div>
         </div>
 
@@ -427,63 +450,63 @@
       <!-- ===================================================================== -->
       <!-- MAIN SHADCN ADMINCN SALES SECTION: OVERVIEW CHART + RECENT SALES -->
       <!-- ===================================================================== -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         <!-- Left 8 Cols: Sales Overview Interactive Chart -->
-        <div class="lg:col-span-8 bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col justify-between">
+        <div class="lg:col-span-8 bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl flex flex-col justify-between">
           <div>
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-3 border-b border-slate-800/80">
               <div>
                 <h3 class="text-base font-bold text-white tracking-tight">Overview</h3>
                 <p class="text-xs text-slate-400 font-mono mt-0.5">Monthly revenue ($) and institutional volume turnover.</p>
               </div>
-              <div class="flex items-center gap-1 bg-[#080b14] border border-slate-800 p-1 rounded-lg text-xs font-mono">
+              <div class="flex items-center gap-1 bg-[#080b14] border border-slate-800 p-1 rounded-lg text-xs font-mono self-start sm:self-auto">
                 <button onclick="setChartPeriod('monthly')" id="tab-chart-monthly" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 font-bold transition">Monthly</button>
                 <button onclick="setChartPeriod('weekly')" id="tab-chart-weekly" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">Weekly</button>
                 <button onclick="setChartPeriod('quarterly')" id="tab-chart-quarterly" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">Quarterly</button>
               </div>
             </div>
 
-            <!-- Canvas Container -->
-            <div class="relative w-full h-[320px]">
+            <!-- Canvas Container (Responsive Height) -->
+            <div class="relative w-full h-[260px] sm:h-[320px]">
               <canvas id="salesOverviewChart"></canvas>
             </div>
           </div>
 
-          <div class="grid grid-cols-3 gap-2 pt-4 border-t border-slate-800/80 mt-4 text-center font-mono text-xs">
+          <div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800/80 mt-3 text-center font-mono text-xs">
             <div>
-              <span class="text-slate-500 text-[10px] uppercase block">Average Monthly</span>
-              <span class="text-white font-bold">$10,704.16</span>
+              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Avg Monthly</span>
+              <span class="text-white font-bold text-[11px] sm:text-xs">$10,704</span>
             </div>
             <div>
-              <span class="text-slate-500 text-[10px] uppercase block">Peak Volume</span>
-              <span class="text-amber-400 font-bold">642.00 Lots</span>
+              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Peak Volume</span>
+              <span class="text-amber-400 font-bold text-[11px] sm:text-xs">642 L</span>
             </div>
             <div>
-              <span class="text-slate-500 text-[10px] uppercase block">Growth YoY</span>
-              <span class="text-emerald-400 font-bold">+435.2%</span>
+              <span class="text-slate-500 text-[9px] sm:text-[10px] uppercase block">Growth YoY</span>
+              <span class="text-emerald-400 font-bold text-[11px] sm:text-xs">+435%</span>
             </div>
           </div>
         </div>
 
         <!-- Right 4 Cols: Recent Sales Widget (AdminCN style) -->
-        <div class="lg:col-span-4 bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl flex flex-col justify-between">
+        <div class="lg:col-span-4 bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl flex flex-col justify-between">
           <div>
-            <div class="mb-4 pb-3 border-b border-slate-800/80">
+            <div class="mb-3.5 pb-2.5 border-b border-slate-800/80">
               <h3 class="text-base font-bold text-white tracking-tight">Recent Sales</h3>
               <p class="text-xs text-slate-400 font-mono mt-0.5" id="recent-sales-summary">You made 265 sales / execution deals this month.</p>
             </div>
             
-            <div class="space-y-3.5" id="recent-sales-compact-list">
+            <div class="space-y-3" id="recent-sales-compact-list">
               <!-- Rendered dynamically -->
             </div>
           </div>
 
           <!-- Monthly Target Card -->
-          <div class="mt-6 pt-4 border-t border-slate-800/80">
+          <div class="mt-5 pt-3.5 border-t border-slate-800/80">
             <div class="flex items-center justify-between text-xs font-mono mb-1.5">
-              <span class="text-slate-400">Monthly Sales Target</span>
-              <span class="text-amber-400 font-bold">$128,450 / $150,000 (85.6%)</span>
+              <span class="text-slate-400">Monthly Target</span>
+              <span class="text-amber-400 font-bold">$128,450 / $150k (85.6%)</span>
             </div>
             <div class="w-full bg-[#080b14] h-2 rounded-full overflow-hidden border border-slate-800">
               <div class="bg-gradient-to-r from-amber-500 to-cyan-400 h-full rounded-full" style="width: 85.6%"></div>
@@ -494,46 +517,46 @@
       </div>
 
       <!-- ===================================================================== -->
-      <!-- FULL RECENT ORDERS & EXECUTION HISTORY DATA TABLE (SHADCN ADMINCN) -->
+      <!-- FULL RECENT ORDERS & EXECUTION HISTORY (RESPONSIVE TABLE + MOBILE CARDS) -->
       <!-- ===================================================================== -->
-      <div id="sales-table-section" class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl space-y-4">
+      <div id="sales-table-section" class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800/80">
           <div>
             <h3 class="text-base font-bold text-white tracking-tight">Recent Orders & Execution History</h3>
             <p class="text-xs text-slate-400 font-mono mt-0.5">
-              Comprehensive transaction log of confirmed limit triggers, market fills, and closed deals.
+              Confirmed limit triggers, market fills, and closed trade receipts.
             </p>
           </div>
 
-          <!-- Search & Filter Controls -->
-          <div class="flex items-center gap-2">
-            <div class="relative">
+          <!-- Search & Filter Controls (Mobile Touch Optimized) -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="relative flex-1 sm:flex-initial min-w-[140px]">
               <input 
                 type="text" 
                 id="table-search-input" 
                 oninput="filterSalesTable()" 
-                placeholder="Filter orders / tickets..." 
-                class="bg-[#080b14] border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-amber-400"
+                placeholder="Filter orders..." 
+                class="w-full bg-[#080b14] border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-amber-400"
               />
               <svg class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
 
             <select id="table-status-filter" onchange="filterSalesTable()" class="bg-[#080b14] border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-amber-400 cursor-pointer">
-              <option value="ALL">All Statuses</option>
+              <option value="ALL">All Status</option>
               <option value="COMPLETED">Completed</option>
               <option value="ACTIVE">Active</option>
               <option value="BREAKEVEN">Breakeven</option>
             </select>
 
-            <button onclick="exportSalesCSV()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-slate-300 transition flex items-center gap-1.5">
+            <button onclick="exportSalesCSV()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-slate-300 transition flex items-center gap-1">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span>Export CSV</span>
+              <span>Export</span>
             </button>
           </div>
         </div>
 
-        <!-- Table Viewport -->
-        <div class="overflow-x-auto">
+        <!-- Desktop Table Viewport (>= 768px) -->
+        <div class="hidden md:block overflow-x-auto">
           <table class="w-full text-left font-mono text-xs text-slate-300">
             <thead class="bg-[#080b14] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
@@ -553,35 +576,40 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Mobile Touch Cards Viewport (< 768px) -->
+        <div id="sales-cards-body" class="md:hidden space-y-2.5 font-mono">
+          <!-- Rendered via JS for touch devices -->
+        </div>
       </div>
 
       <!-- ===================================================================== -->
       <!-- DEDICATED LIVE HELD POSITIONS ADJUSTMENT PANEL (WEBSITE & PANEL) -->
       <!-- ===================================================================== -->
-      <div id="holding-positions-section" class="bg-[#0c101d] border-2 border-cyan-500/30 rounded-xl p-5 shadow-2xl relative overflow-hidden">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-800">
+      <div id="holding-positions-section" class="bg-[#0c101d] border-2 border-cyan-500/30 rounded-xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
           <div>
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
-              <h2 class="text-base font-bold text-white tracking-tight">Live Active Holding Positions Panel</h2>
+              <h2 class="text-base font-bold text-white tracking-tight">Live Active Holding Positions</h2>
               <span id="holding-positions-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-bold">
                 0 HOLDING
               </span>
             </div>
             <p class="text-xs text-slate-400 font-mono mt-0.5">
-              Live bi-directional control: adjust Stop Loss, Take Profit, and partial lot closures directly on active MT5 tickets.
+              Live bi-directional MT5 ticket control: adjust SL, TP, and execute partial closures.
             </p>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-xs font-mono text-slate-400">Total Floating PnL:</span>
+            <span class="text-xs font-mono text-slate-400">Floating PnL:</span>
             <span id="holding-total-pnl" class="text-base font-black font-mono text-white">$0.00</span>
           </div>
         </div>
 
         <!-- Dynamic Held Positions Container -->
-        <div id="holding-positions-list" class="mt-4 space-y-4">
-          <div class="text-center py-10 text-slate-500 text-xs font-mono bg-[#080b14] rounded-lg border border-slate-800/80">
+        <div id="holding-positions-list" class="mt-4 space-y-3.5">
+          <div class="text-center py-8 text-slate-500 text-xs font-mono bg-[#080b14] rounded-lg border border-slate-800/80">
             No positions currently held by active account. New market orders or limit fills will appear here instantly with full live adjustment controls.
           </div>
         </div>
@@ -590,14 +618,14 @@
       <!-- ===================================================================== -->
       <!-- MAIN SPLIT WORKSPACE: SIGNAL QUEUE & RISK CONTROLS -->
       <!-- ===================================================================== -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         <!-- LEFT COLUMN (7 COLS): SIGNAL APPROVAL QUEUE -->
-        <div class="lg:col-span-7 space-y-6">
+        <div class="lg:col-span-7 space-y-4 sm:space-y-6">
           
           <!-- Signal Approval Queue (Positions Approve) -->
-          <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl" id="signals-queue-panel">
-            <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-4">
+          <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl" id="signals-queue-panel">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3.5">
               <div class="flex items-center gap-2">
                 <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
                 <h3 class="text-base font-bold text-white">Signal Approval Queue</h3>
@@ -606,13 +634,13 @@
                 </span>
               </div>
               <button onclick="generateSimulatedSignal()" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 transition">
-                + Simulate S&D Setup
+                + Simulate Setup
               </button>
             </div>
 
             <!-- Signal Cards Container -->
             <div id="queue-signals-list" class="space-y-3">
-              <div class="text-center py-10 text-slate-500 text-xs font-mono">
+              <div class="text-center py-8 text-slate-500 text-xs font-mono">
                 No pending setups in queue. Awaiting institutional displacement sweeps or click <b>[+ Test Signal]</b>.
               </div>
             </div>
@@ -621,10 +649,10 @@
         </div>
 
         <!-- RIGHT COLUMN (5 COLS): INSTITUTIONAL RISK CONTROLS -->
-        <div class="lg:col-span-5 space-y-6">
+        <div class="lg:col-span-5 space-y-4 sm:space-y-6">
           
           <!-- Institutional Risk Controls & Parameters -->
-          <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-5 shadow-xl space-y-4">
+          <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl space-y-4">
             <h3 class="text-sm font-bold text-white uppercase font-mono tracking-wider text-slate-300">
               ⚡ Cockpit Risk & Execution Controls
             </h3>
@@ -646,7 +674,7 @@
                   step="0.05" 
                   value="0.50" 
                   oninput="handleRiskSliderChange(this.value)" 
-                  class="flex-1 accent-amber-500 cursor-pointer"
+                  class="flex-1 accent-amber-500 cursor-pointer h-2"
                 />
                 <input 
                   type="number" 
@@ -661,11 +689,11 @@
               </div>
 
               <!-- Quick Presets -->
-              <div class="grid grid-cols-4 gap-2 mt-2">
-                <button onclick="setRiskPct(0.50)" id="risk-preset-05" class="py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition">0.5% (Safe)</button>
-                <button onclick="setRiskPct(1.00)" id="risk-preset-10" class="py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">1.0%</button>
-                <button onclick="setRiskPct(1.50)" id="risk-preset-15" class="py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">1.5% (Agg)</button>
-                <button onclick="setRiskPct(2.00)" id="risk-preset-20" class="py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">2.0%</button>
+              <div class="grid grid-cols-4 gap-1.5 sm:gap-2 mt-2">
+                <button onclick="setRiskPct(0.50)" id="risk-preset-05" class="py-1.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition">0.5% (Safe)</button>
+                <button onclick="setRiskPct(1.00)" id="risk-preset-10" class="py-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">1.0%</button>
+                <button onclick="setRiskPct(1.50)" id="risk-preset-15" class="py-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">1.5% (Agg)</button>
+                <button onclick="setRiskPct(2.00)" id="risk-preset-20" class="py-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition">2.0%</button>
               </div>
             </div>
 
@@ -673,10 +701,10 @@
             <div>
               <span class="block text-xs font-mono text-slate-400 mb-1">Execution Pipeline</span>
               <div class="grid grid-cols-2 gap-2">
-                <button onclick="setExecutionMode('AUTO')" id="btn-auto-exec" class="py-2 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition">
+                <button onclick="setExecutionMode('AUTO')" id="btn-auto-exec" class="py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition">
                   🤖 AUTO-EXECUTE
                 </button>
-                <button onclick="setExecutionMode('MANUAL')" id="btn-manual-exec" class="py-2 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition">
+                <button onclick="setExecutionMode('MANUAL')" id="btn-manual-exec" class="py-2.5 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition">
                   👤 POSITIONS APPROVE
                 </button>
               </div>
@@ -696,7 +724,7 @@
                 step="0.5" 
                 value="3.0" 
                 oninput="handleRRChange(this.value)" 
-                class="w-full accent-amber-500 cursor-pointer"
+                class="w-full accent-amber-500 cursor-pointer h-2"
               />
             </div>
 
@@ -710,10 +738,42 @@
   </div>
 
   <!-- ========================================================================= -->
+  <!-- MOBILE BOTTOM THUMB DOCK (IOS/ANDROID ERGONOMIC CONTROLS) -->
+  <!-- ========================================================================= -->
+  <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-[#090d18]/95 backdrop-blur-xl border-t border-slate-800/90 z-30 px-3 py-1.5 flex items-center justify-around shadow-2xl safe-area-bottom">
+    <a href="/dashboard/sales" class="flex flex-col items-center gap-0.5 text-amber-400 py-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      <span class="text-[9px] font-mono font-bold">Sales</span>
+    </a>
+
+    <a href="#holding-positions-section" class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-cyan-400 transition py-1 relative">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      <span class="text-[9px] font-mono">Positions</span>
+      <span id="dock-open-badge" class="absolute top-0 right-0 px-1 rounded-full bg-cyan-500 text-black text-[9px] font-bold">0</span>
+    </a>
+
+    <a href="#signals-queue-panel" class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-amber-400 transition py-1 relative">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <span class="text-[9px] font-mono">Signals</span>
+      <span id="dock-pending-badge" class="absolute top-0 right-0 px-1 rounded-full bg-amber-500 text-black text-[9px] font-bold">0</span>
+    </a>
+
+    <button type="button" onclick="executeMoveBEAll()" class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-amber-400 transition py-1">
+      <span class="text-base leading-none">🛡️</span>
+      <span class="text-[9px] font-mono">BE All</span>
+    </button>
+
+    <button type="button" onclick="openBridgeModal()" class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-cyan-400 transition py-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <span class="text-[9px] font-mono">Bridge</span>
+    </button>
+  </nav>
+
+  <!-- ========================================================================= -->
   <!-- MT5 MULTI-ACCOUNT MANAGEMENT MODAL -->
   <!-- ========================================================================= -->
-  <div id="account-manager-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4">
+  <div id="account-manager-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-5 sm:p-6 text-slate-100 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <span class="text-cyan-400">⚙️</span> MT5 Multi-Account Configuration
@@ -728,7 +788,7 @@
       <!-- Add New Account Form -->
       <form onsubmit="handleAddAccountSubmit(event)" class="space-y-3 pt-3 border-t border-slate-800 text-xs font-mono">
         <span class="block text-amber-400 font-bold uppercase text-[10px]">Add New MT5 Account</span>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label class="block text-slate-400 mb-1 text-[10px]">ACCOUNT NAME</label>
             <input type="text" id="new-acc-name" placeholder="Alpha Live Desk" required class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
@@ -739,7 +799,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label class="block text-slate-400 mb-1 text-[10px]">PASSWORD</label>
             <input type="password" id="new-acc-password" placeholder="••••••••" required class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
@@ -763,8 +823,8 @@
   </div>
 
   <!-- MT5 Bridge Guide Modal -->
-  <div id="mt5-guide-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4 text-xs">
+  <div id="mt5-guide-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-5 sm:p-6 text-slate-100 flex flex-col gap-4 text-xs max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <span class="text-amber-400">📖</span> MT5 Bridge Connection Guide
@@ -802,8 +862,8 @@
   <!-- ========================================================================= -->
   <!-- BRIDGE & TELEMETRY TUNNEL CONFIGURATION MODAL -->
   <!-- ========================================================================= -->
-  <div id="bridge-config-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 text-slate-100 flex flex-col gap-4 text-xs font-mono">
+  <div id="bridge-config-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-[#0c101d] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-5 sm:p-6 text-slate-100 flex flex-col gap-4 text-xs font-mono max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <span class="text-cyan-400">⚡</span> Execution Bridge & Telemetry Config
@@ -828,11 +888,11 @@
         </div>
 
         <!-- Quick Presets -->
-        <div class="flex items-center gap-2 pt-1">
-          <button type="button" onclick="setBridgePreset('http://127.0.0.1:8000')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-bold">
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <button type="button" onclick="setBridgePreset('http://127.0.0.1:8000')" class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-bold">
             Localhost (127.0.0.1:8000)
           </button>
-          <button type="button" onclick="setBridgePreset('https://www.bluexacedamy.space/api')" class="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-bold">
+          <button type="button" onclick="setBridgePreset('https://www.bluexacedamy.space/api')" class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-bold">
             Production Gateway
           </button>
         </div>
@@ -870,10 +930,10 @@
       </div>
 
       <div class="flex items-center gap-2 pt-2 border-t border-slate-800">
-        <button type="button" onclick="testBridgeConnection()" id="btn-ping-bridge" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold transition flex items-center justify-center gap-1.5">
+        <button type="button" onclick="testBridgeConnection()" id="btn-ping-bridge" class="flex-1 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold transition flex items-center justify-center gap-1.5">
           <span>⚡ Ping Bridge</span>
         </button>
-        <button type="button" onclick="saveBridgeConfig()" class="flex-1 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition">
+        <button type="button" onclick="saveBridgeConfig()" class="flex-1 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition">
           Save & Apply
         </button>
       </div>
@@ -881,7 +941,7 @@
   </div>
 
   <!-- Notification Toast -->
-  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-[#0c101d] border border-amber-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl font-mono text-xs hidden flex items-center gap-2"></div>
+  <div id="toast" class="fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 bg-[#0c101d] border border-amber-500/50 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-2xl font-mono text-xs hidden flex items-center gap-2"></div>
 
   <!-- ========================================================================= -->
   <!-- CLIENT JAVASCRIPT ENGINE & ANALYTICS -->
@@ -941,10 +1001,19 @@
       setTimeout(() => toast.classList.add('hidden'), 2800);
     }
 
+    // Mobile Responsive Drawer Toggle
     function toggleSidebar() {
       const sb = document.getElementById('sidebar');
-      sb.classList.toggle('-translate-x-full');
-      sb.classList.toggle('absolute');
+      const bd = document.getElementById('sidebar-backdrop');
+      if (!sb) return;
+      const isHidden = sb.classList.contains('-translate-x-full');
+      if (isHidden) {
+        sb.classList.remove('-translate-x-full');
+        if (bd) bd.classList.remove('hidden');
+      } else {
+        sb.classList.add('-translate-x-full');
+        if (bd) bd.classList.add('hidden');
+      }
     }
 
     function openAccountModal() {
@@ -1064,11 +1133,11 @@
       if (!btn) return;
 
       if (enabled) {
-        btn.className = 'px-3.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 text-xs font-mono font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-500/10';
+        btn.className = 'px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-emerald-500/10';
         dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400 animate-pulse';
         txt.textContent = 'AUTO BE @ +2RR: ON';
       } else {
-        btn.className = 'px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 text-xs font-mono font-bold transition flex items-center gap-2 hover:border-slate-700';
+        btn.className = 'px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 text-[11px] sm:text-xs font-mono font-bold transition flex items-center gap-1.5 sm:gap-2 hover:border-slate-700';
         dot.className = 'w-2 h-2 rounded-full bg-slate-600';
         txt.textContent = 'AUTO BE @ +2RR: OFF';
       }
@@ -1094,12 +1163,12 @@
 
       ['05', '10', '15', '20'].forEach(p => {
         const el = document.getElementById(`risk-preset-${p}`);
-        if (el) el.className = 'py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition';
+        if (el) el.className = 'py-1.5 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-xs font-bold hover:border-slate-700 transition';
       });
-      if (formatted === '0.50') document.getElementById('risk-preset-05').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
-      else if (formatted === '1.00') document.getElementById('risk-preset-10').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
-      else if (formatted === '1.50') document.getElementById('risk-preset-15').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
-      else if (formatted === '2.00') document.getElementById('risk-preset-20').className = 'py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+      if (formatted === '0.50') document.getElementById('risk-preset-05').className = 'py-1.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+      else if (formatted === '1.00') document.getElementById('risk-preset-10').className = 'py-1.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+      else if (formatted === '1.50') document.getElementById('risk-preset-15').className = 'py-1.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
+      else if (formatted === '2.00') document.getElementById('risk-preset-20').className = 'py-1.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition';
 
       syncSettings();
       showToast(`Risk Allocation: ${formatted}%`);
@@ -1117,11 +1186,11 @@
     function setExecutionMode(mode) {
       currentSettings.execution_mode = mode;
       document.getElementById('btn-auto-exec').className = mode === 'AUTO' 
-        ? 'py-2 px-3 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition'
-        : 'py-2 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
+        ? 'py-2.5 px-3 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono text-xs font-bold transition'
+        : 'py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
       document.getElementById('btn-manual-exec').className = mode === 'MANUAL'
-        ? 'py-2 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition'
-        : 'py-2 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
+        ? 'py-2.5 px-3 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 font-mono text-xs font-bold transition'
+        : 'py-2.5 px-3 rounded-lg border border-slate-800 text-slate-400 font-mono text-xs font-bold hover:border-slate-700 transition';
       syncSettings();
       showToast(`Execution: ${mode}`);
     }
@@ -1144,31 +1213,34 @@
         registeredAccounts = data.accounts || [];
 
         const headerSelect = document.getElementById('header-account-select');
-        headerSelect.innerHTML = registeredAccounts.map(a => `
-          <option value="${a.id}" ${a.is_active ? 'selected' : ''}>
-            #${a.login} (${a.name})
-          </option>
-        `).join('');
+        if (headerSelect) {
+          headerSelect.innerHTML = registeredAccounts.map(a => `
+            <option value="${a.id}" ${a.is_active ? 'selected' : ''}>
+              #${a.login} (${a.name})
+            </option>
+          `).join('');
+        }
 
         const container = document.getElementById('accounts-list-container');
-        container.innerHTML = registeredAccounts.map(a => `
-          <div class="flex items-center justify-between p-2 rounded-lg bg-[#080b14] border ${a.is_active ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-800'}">
-            <div>
-              <div class="font-bold ${a.is_active ? 'text-cyan-400' : 'text-white'}">
-                ${a.name} ${a.is_active ? '<span class="text-emerald-400 text-[10px]">[ACTIVE]</span>' : ''}
+        if (container) {
+          container.innerHTML = registeredAccounts.map(a => `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-[#080b14] border ${a.is_active ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-800'}">
+              <div>
+                <div class="font-bold ${a.is_active ? 'text-cyan-400' : 'text-white'}">
+                  ${a.name} ${a.is_active ? '<span class="text-emerald-400 text-[10px]">[ACTIVE]</span>' : ''}
+                </div>
+                <div class="text-[10px] text-slate-400">
+                  Login: #${a.login} | Server: ${a.server}
+                </div>
               </div>
-              <div class="text-[10px] text-slate-400">
-                Login: #${a.login} | Server: ${a.server}
+              <div class="flex items-center gap-1.5">
+                ${!a.is_active ? `<button onclick="handleAccountSwitch('${a.id}')" class="px-2 py-1 rounded bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/30 text-[10px] font-bold">SWITCH</button>` : ''}
+                ${registeredAccounts.length > 1 ? `<button onclick="handleDeleteAccount('${a.id}')" class="px-2 py-1 rounded bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold">DEL</button>` : ''}
               </div>
             </div>
-            <div class="flex items-center gap-1.5">
-              ${!a.is_active ? `<button onclick="handleAccountSwitch('${a.id}')" class="px-2 py-1 rounded bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/30 text-[10px] font-bold">SWITCH</button>` : ''}
-              ${registeredAccounts.length > 1 ? `<button onclick="handleDeleteAccount('${a.id}')" class="px-2 py-1 rounded bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold">DEL</button>` : ''}
-            </div>
-          </div>
-        `).join('');
+          `).join('');
+        }
       } catch (e) {
-        // Fallback demo account
         const headerSelect = document.getElementById('header-account-select');
         if (headerSelect) {
           headerSelect.innerHTML = `<option value="115076007">#115076007 (Limeng Live Desk)</option>`;
@@ -1367,7 +1439,7 @@
         volume: [120, 85, 410, 195, 240, 190, 215, 310, 270, 355, 445, 642]
       },
       weekly: {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        labels: ['W1', 'W2', 'W3', 'W4'],
         revenue: [2850, 3120, 3450, 3425],
         volume: [145, 160, 175, 162]
       },
@@ -1399,7 +1471,7 @@
               data: data.revenue,
               backgroundColor: '#ffb800',
               borderRadius: 6,
-              barThickness: currentChartPeriod === 'monthly' ? 22 : 44,
+              barThickness: currentChartPeriod === 'monthly' ? (window.innerWidth < 640 ? 14 : 22) : 36,
               yAxisID: 'y'
             },
             {
@@ -1413,7 +1485,7 @@
               pointBackgroundColor: '#00ffe0',
               pointBorderColor: '#0c101d',
               pointBorderWidth: 2,
-              pointRadius: 4,
+              pointRadius: window.innerWidth < 640 ? 3 : 4,
               tension: 0.35,
               yAxisID: 'y1'
             }
@@ -1432,8 +1504,8 @@
               position: 'top',
               labels: {
                 color: '#94a3b8',
-                font: { family: 'JetBrains Mono', size: 11 },
-                boxWidth: 12,
+                font: { family: 'JetBrains Mono', size: window.innerWidth < 640 ? 10 : 11 },
+                boxWidth: 10,
                 usePointStyle: true
               }
             },
@@ -1443,9 +1515,9 @@
               bodyColor: '#94a3b8',
               borderColor: '#334155',
               borderWidth: 1,
-              padding: 10,
-              titleFont: { family: 'JetBrains Mono', size: 12 },
-              bodyFont: { family: 'JetBrains Mono', size: 11 },
+              padding: 8,
+              titleFont: { family: 'JetBrains Mono', size: 11 },
+              bodyFont: { family: 'JetBrains Mono', size: 10 },
               callbacks: {
                 label: function(context) {
                   if (context.dataset.yAxisID === 'y') {
@@ -1460,14 +1532,14 @@
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 11 } }
+              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: window.innerWidth < 640 ? 9 : 11 } }
             },
             y: {
               position: 'left',
               grid: { color: 'rgba(30, 41, 59, 0.5)' },
               ticks: {
                 color: '#64748b',
-                font: { family: 'JetBrains Mono', size: 10 },
+                font: { family: 'JetBrains Mono', size: 9 },
                 callback: value => '$' + (value >= 1000 ? (value / 1000) + 'k' : value)
               }
             },
@@ -1476,7 +1548,7 @@
               grid: { display: false },
               ticks: {
                 color: '#00ffe0',
-                font: { family: 'JetBrains Mono', size: 10 },
+                font: { family: 'JetBrains Mono', size: 9 },
                 callback: value => value + 'L'
               }
             }
@@ -1513,26 +1585,26 @@
       const container = document.getElementById('recent-sales-compact-list');
       if (!container) return;
       container.innerHTML = recentSalesData.map(item => `
-        <div class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-900/60 transition group">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-full bg-gradient-to-tr ${item.gradient} flex items-center justify-center text-xs font-bold text-black flex-shrink-0 shadow-sm">
+        <div class="flex items-center justify-between gap-2.5 p-1.5 rounded-lg hover:bg-slate-900/60 transition group">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr ${item.gradient} flex items-center justify-center text-xs font-bold text-black flex-shrink-0 shadow-sm">
               ${item.initials}
             </div>
             <div class="min-w-0">
               <div class="text-xs font-semibold text-white truncate group-hover:text-amber-400 transition">${item.name}</div>
-              <div class="text-[11px] text-slate-400 truncate font-mono">${item.email}</div>
+              <div class="text-[10px] text-slate-400 truncate font-mono">${item.email}</div>
             </div>
           </div>
           <div class="text-right flex-shrink-0">
             <div class="text-xs font-mono font-bold text-emerald-400">${item.amount}</div>
-            <div class="text-[10px] font-mono text-slate-500">${item.asset}</div>
+            <div class="text-[9px] font-mono text-slate-500">${item.asset}</div>
           </div>
         </div>
       `).join('');
     }
 
     // =========================================================================
-    // 4. RECENT ORDERS & EXECUTION HISTORY DATA TABLE
+    // 4. RECENT ORDERS & EXECUTION HISTORY DATA (DESKTOP TABLE + MOBILE CARDS)
     // =========================================================================
     let allOrdersData = [
       { ticket: '892341', client: 'Limeng Sovann', symbol: 'XAU/USD', side: 'BUY', volume: '1.50', range: '2742.50 → 2754.20', status: 'COMPLETED', pnl: 1755.00, time: '2026-02-04 05:22:14' },
@@ -1545,51 +1617,98 @@
 
     function renderSalesTable(data = allOrdersData) {
       const tbody = document.getElementById('sales-table-body');
-      if (!tbody) return;
+      const mobileCards = document.getElementById('sales-cards-body');
 
       if (data.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="9" class="py-8 text-center text-slate-500 text-xs">
-              No orders found matching the filter criteria.
-            </td>
-          </tr>
-        `;
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-500 text-xs">No orders found matching filter.</td></tr>`;
+        }
+        if (mobileCards) {
+          mobileCards.innerHTML = `<div class="py-6 text-center text-slate-500 text-xs">No orders found matching filter.</div>`;
+        }
         return;
       }
 
-      tbody.innerHTML = data.map(o => {
-        const isBuy = o.side === 'BUY';
-        const isCompleted = o.status === 'COMPLETED';
-        const isBreakeven = o.status === 'BREAKEVEN';
-        const isProf = o.pnl >= 0;
+      // 1. Render Desktop Table
+      if (tbody) {
+        tbody.innerHTML = data.map(o => {
+          const isBuy = o.side === 'BUY';
+          const isCompleted = o.status === 'COMPLETED';
+          const isBreakeven = o.status === 'BREAKEVEN';
+          const isProf = o.pnl >= 0;
 
-        const statusPill = isCompleted
-          ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">COMPLETED</span>'
-          : isBreakeven
-          ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">BREAKEVEN</span>'
-          : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">ACTIVE</span>';
+          const statusPill = isCompleted
+            ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">COMPLETED</span>'
+            : isBreakeven
+            ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">BREAKEVEN</span>'
+            : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">ACTIVE</span>';
 
-        return `
-          <tr class="hover:bg-slate-900/40 transition">
-            <td class="py-3 px-3 font-bold text-white">#${o.ticket}</td>
-            <td class="py-3 px-3 text-slate-300 font-semibold">${o.client}</td>
-            <td class="py-3 px-3 text-amber-400 font-bold">${o.symbol}</td>
-            <td class="py-3 px-3">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}">
-                ${o.side}
-              </span>
-            </td>
-            <td class="py-3 px-3 text-slate-200">${o.volume} Lots</td>
-            <td class="py-3 px-3 text-slate-400">${o.range}</td>
-            <td class="py-3 px-3">${statusPill}</td>
-            <td class="py-3 px-3 text-right font-bold ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
-              ${isProf ? '+' : ''}$${o.pnl.toLocaleString('en-US', {minimumFractionDigits: 2})}
-            </td>
-            <td class="py-3 px-3 text-right text-slate-500 text-[11px]">${o.time}</td>
-          </tr>
-        `;
-      }).join('');
+          return `
+            <tr class="hover:bg-slate-900/40 transition">
+              <td class="py-3 px-3 font-bold text-white">#${o.ticket}</td>
+              <td class="py-3 px-3 text-slate-300 font-semibold">${o.client}</td>
+              <td class="py-3 px-3 text-amber-400 font-bold">${o.symbol}</td>
+              <td class="py-3 px-3">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}">
+                  ${o.side}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-slate-200">${o.volume} Lots</td>
+              <td class="py-3 px-3 text-slate-400">${o.range}</td>
+              <td class="py-3 px-3">${statusPill}</td>
+              <td class="py-3 px-3 text-right font-bold ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
+                ${isProf ? '+' : ''}$${o.pnl.toLocaleString('en-US', {minimumFractionDigits: 2})}
+              </td>
+              <td class="py-3 px-3 text-right text-slate-500 text-[11px]">${o.time}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // 2. Render Mobile Touch Cards (< 768px)
+      if (mobileCards) {
+        mobileCards.innerHTML = data.map(o => {
+          const isBuy = o.side === 'BUY';
+          const isCompleted = o.status === 'COMPLETED';
+          const isBreakeven = o.status === 'BREAKEVEN';
+          const isProf = o.pnl >= 0;
+
+          const statusPill = isCompleted
+            ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">DONE</span>'
+            : isBreakeven
+            ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">BE</span>'
+            : '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">OPEN</span>';
+
+          return `
+            <div class="p-3 rounded-lg bg-[#080b14] border border-slate-800 space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-white">#${o.ticket}</span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'}">
+                    ${o.side}
+                  </span>
+                  <span class="text-amber-400 font-bold">${o.symbol}</span>
+                </div>
+                <div>${statusPill}</div>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+                <div>
+                  <span class="text-white font-semibold">${o.volume} L</span> • <span class="text-slate-400 text-[10px]">${o.range}</span>
+                </div>
+                <div class="font-bold text-sm ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${isProf ? '+' : ''}$${o.pnl.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-[10px] text-slate-500">
+                <span class="truncate max-w-[150px]">${o.client}</span>
+                <span>${o.time}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
 
     function filterSalesTable() {
@@ -1643,43 +1762,79 @@
         // Ticker & MT5 Connection
         const pulse = document.getElementById('nav-pulse-dot');
         const connLabel = document.getElementById('nav-terminal-conn');
+        const mobilePulse = document.getElementById('nav-pulse-dot-mobile');
+        const mobileBid = document.getElementById('nav-tick-bid-mobile');
+        const mobileSpread = document.getElementById('nav-tick-spread-mobile');
 
         if (data.account && data.account.connected) {
           latestAccountState = data.account;
-          pulse.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle';
-          connLabel.textContent = `MT5: #${data.account.login} (${data.account.broker})`;
+          if (pulse) pulse.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle';
+          if (mobilePulse) mobilePulse.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse-subtle';
+          if (connLabel) connLabel.textContent = `MT5: #${data.account.login} (${data.account.broker})`;
         } else {
-          pulse.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle';
-          connLabel.textContent = 'MT5: #115076007 (Lirunex)';
+          if (pulse) pulse.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-md shadow-emerald-400/50 animate-pulse-subtle';
+          if (connLabel) connLabel.textContent = 'MT5: #115076007 (Lirunex)';
         }
 
         if (data.tick && !data.tick.error) {
-          document.getElementById('nav-tick-bid').textContent = data.tick.bid.toFixed(2);
-          document.getElementById('nav-tick-ask').textContent = data.tick.ask.toFixed(2);
-          document.getElementById('nav-tick-spread').textContent = `${data.tick.spread_points} pts ($${data.tick.spread_usd.toFixed(2)})`;
+          const bidVal = data.tick.bid.toFixed(2);
+          const askVal = data.tick.ask.toFixed(2);
+          const spreadPts = data.tick.spread_points;
+          const spreadUsd = data.tick.spread_usd.toFixed(2);
+
+          const bidEl = document.getElementById('nav-tick-bid');
+          const askEl = document.getElementById('nav-tick-ask');
+          const spreadEl = document.getElementById('nav-tick-spread');
+
+          if (bidEl) bidEl.textContent = bidVal;
+          if (askEl) askEl.textContent = askVal;
+          if (spreadEl) spreadEl.textContent = `${spreadPts} pts ($${spreadUsd})`;
+
+          if (mobileBid) mobileBid.textContent = bidVal;
+          if (mobileSpread) mobileSpread.textContent = `${spreadPts}pt`;
         } else {
-          document.getElementById('nav-tick-bid').textContent = "2748.50";
-          document.getElementById('nav-tick-ask').textContent = "2748.85";
-          document.getElementById('nav-tick-spread').textContent = "35 pts ($0.35)";
+          const bidEl = document.getElementById('nav-tick-bid');
+          const askEl = document.getElementById('nav-tick-ask');
+          const spreadEl = document.getElementById('nav-tick-spread');
+
+          if (bidEl) bidEl.textContent = "3949.68";
+          if (askEl) askEl.textContent = "3949.81";
+          if (spreadEl) spreadEl.textContent = "13.0 pts ($0.13)";
+
+          if (mobileBid) mobileBid.textContent = "3949.68";
+          if (mobileSpread) mobileSpread.textContent = "13pt";
         }
 
         // Real Stats from MT5 or persistent state
         if (data.real_stats) {
           const pnlVal = data.real_stats.total_realized_pnl;
           const pnlEl = document.getElementById('kpi-net-pnl');
-          pnlEl.textContent = `${pnlVal >= 0 ? '+' : ''}$${pnlVal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+          if (pnlEl) pnlEl.textContent = `${pnlVal >= 0 ? '+' : ''}$${pnlVal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
 
-          document.getElementById('kpi-volume').textContent = `${data.real_stats.total_volume_lots.toFixed(2)} Lots`;
-          document.getElementById('kpi-closed-count').textContent = `+${data.real_stats.closed_trades_count}`;
-          document.getElementById('kpi-win-rate').textContent = `${data.real_stats.win_rate_pct.toFixed(1)}% Win Rate`;
+          const volEl = document.getElementById('kpi-volume');
+          const dealsEl = document.getElementById('kpi-closed-count');
+          const winEl = document.getElementById('kpi-win-rate');
+
+          if (volEl) volEl.textContent = `${data.real_stats.total_volume_lots.toFixed(2)} L`;
+          if (dealsEl) dealsEl.textContent = `+${data.real_stats.closed_trades_count}`;
+          if (winEl) winEl.textContent = `${data.real_stats.win_rate_pct.toFixed(1)}%`;
         }
 
         // Active Orders Count
         const openCount = (data.positions || []).length;
         const pendingCount = (data.pending_signals || []).length;
-        document.getElementById('nav-open-badge').textContent = openCount;
-        document.getElementById('nav-pending-badge').textContent = pendingCount;
-        document.getElementById('holding-positions-badge').textContent = `${openCount} HOLDING`;
+
+        const navOpen = document.getElementById('nav-open-badge');
+        const navPending = document.getElementById('nav-pending-badge');
+        const holdBadge = document.getElementById('holding-positions-badge');
+        const dockOpen = document.getElementById('dock-open-badge');
+        const dockPending = document.getElementById('dock-pending-badge');
+
+        if (navOpen) navOpen.textContent = openCount;
+        if (navPending) navPending.textContent = pendingCount;
+        if (holdBadge) holdBadge.textContent = `${openCount} HOLDING`;
+        if (dockOpen) dockOpen.textContent = openCount;
+        if (dockPending) dockPending.textContent = pendingCount;
 
         // Render Live Holding Positions Panel
         renderHoldingPositions(data.positions || [], data.tick);
@@ -1697,13 +1852,17 @@
 
       let totalPnl = 0.0;
       if (positions.length === 0) {
-        totalPnlEl.textContent = '$0.00';
-        totalPnlEl.className = 'text-base font-black font-mono text-slate-400';
-        container.innerHTML = `
-          <div class="text-center py-10 text-slate-500 text-xs font-mono bg-[#080b14] rounded-lg border border-slate-800/80">
-            No positions currently held by active account. New market orders or limit fills will appear here instantly with full live adjustment controls.
-          </div>
-        `;
+        if (totalPnlEl) {
+          totalPnlEl.textContent = '$0.00';
+          totalPnlEl.className = 'text-base font-black font-mono text-slate-400';
+        }
+        if (container) {
+          container.innerHTML = `
+            <div class="text-center py-8 text-slate-500 text-xs font-mono bg-[#080b14] rounded-lg border border-slate-800/80">
+              No positions currently held by active account. New market orders or limit fills will appear here instantly with full live adjustment controls.
+            </div>
+          `;
+        }
         return;
       }
 
@@ -1713,70 +1872,72 @@
         const isBuy = p.type === 'BUY';
 
         return `
-          <div class="p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-emerald-500/40' : 'border-rose-500/40'} space-y-3 font-mono text-xs shadow-lg">
+          <div class="p-3.5 sm:p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-emerald-500/40' : 'border-rose-500/40'} space-y-3 font-mono text-xs shadow-lg">
             
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-slate-800">
+            <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
               <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'}">
                   ${p.type}
                 </span>
-                <span class="font-bold text-white text-sm">${p.symbol} #${p.ticket}</span>
-                <span class="text-amber-400 font-bold">⚡ ${p.volume} LOTS</span>
+                <span class="font-bold text-white text-xs sm:text-sm">${p.symbol} #${p.ticket}</span>
+                <span class="text-amber-400 font-bold text-xs">⚡ ${p.volume} L</span>
               </div>
 
-              <div class="flex items-center gap-3">
-                <span class="text-slate-400 text-xs">Floating PnL:</span>
-                <span class="text-sm font-black ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-black ${isProf ? 'text-emerald-400' : 'text-rose-400'}">
                   ${isProf ? '+' : ''}$${p.pnl.toFixed(2)}
                 </span>
               </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 py-1 text-[11px] bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">
+            <div class="grid grid-cols-4 gap-1.5 sm:gap-2 py-1 text-[10px] sm:text-[11px] bg-slate-950/60 p-2 rounded-lg border border-slate-800/60 text-center">
               <div>
-                <span class="text-slate-500 block text-[9px]">OPEN PRICE</span>
-                <span class="font-bold text-cyan-400">${p.open_price.toFixed(2)}</span>
+                <span class="text-slate-500 block text-[8px] sm:text-[9px]">OPEN</span>
+                <span class="font-bold text-cyan-400 truncate">${p.open_price.toFixed(2)}</span>
               </div>
               <div>
-                <span class="text-slate-500 block text-[9px]">CURRENT PRICE</span>
-                <span class="font-bold text-white">${p.current_price.toFixed(2)}</span>
+                <span class="text-slate-500 block text-[8px] sm:text-[9px]">PRICE</span>
+                <span class="font-bold text-white truncate">${p.current_price.toFixed(2)}</span>
               </div>
               <div>
-                <span class="text-slate-500 block text-[9px]">CURRENT SL</span>
-                <span class="font-bold text-rose-400">${p.sl > 0 ? p.sl.toFixed(2) : 'NONE'}</span>
+                <span class="text-slate-500 block text-[8px] sm:text-[9px]">SL</span>
+                <span class="font-bold text-rose-400 truncate">${p.sl > 0 ? p.sl.toFixed(2) : 'NONE'}</span>
               </div>
               <div>
-                <span class="text-slate-500 block text-[9px]">CURRENT TP</span>
-                <span class="font-bold text-emerald-400">${p.tp > 0 ? p.tp.toFixed(2) : 'NONE'}</span>
+                <span class="text-slate-500 block text-[8px] sm:text-[9px]">TP</span>
+                <span class="font-bold text-emerald-400 truncate">${p.tp > 0 ? p.tp.toFixed(2) : 'NONE'}</span>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
-                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Adjust Invalidation SL</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+              <!-- Stepper SL -->
+              <div class="bg-slate-900/80 p-2 sm:p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+                <span class="text-[9px] uppercase font-bold text-slate-400 block mb-1">Adjust Invalidation SL</span>
                 <div class="flex items-center gap-1.5">
-                  <button type="button" onclick="stepVal('pos-sl-${p.ticket}', -0.5)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold">-0.5</button>
+                  <button type="button" onclick="stepVal('pos-sl-${p.ticket}', -0.5)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold active:bg-slate-600">-0.5</button>
                   <input type="number" step="0.1" id="pos-sl-${p.ticket}" value="${p.sl.toFixed(2)}" class="w-full bg-[#080b14] border border-slate-700 rounded px-2 py-1 text-center text-xs font-bold text-rose-400">
-                  <button type="button" onclick="stepVal('pos-sl-${p.ticket}', 0.5)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold">+0.5</button>
+                  <button type="button" onclick="stepVal('pos-sl-${p.ticket}', 0.5)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold active:bg-slate-600">+0.5</button>
                 </div>
               </div>
 
-              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
-                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Adjust Target TP</span>
+              <!-- Stepper TP -->
+              <div class="bg-slate-900/80 p-2 sm:p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+                <span class="text-[9px] uppercase font-bold text-slate-400 block mb-1">Adjust Target TP</span>
                 <div class="flex items-center gap-1.5">
-                  <button type="button" onclick="stepVal('pos-tp-${p.ticket}', -0.5)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold">-0.5</button>
+                  <button type="button" onclick="stepVal('pos-tp-${p.ticket}', -0.5)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold active:bg-slate-600">-0.5</button>
                   <input type="number" step="0.1" id="pos-tp-${p.ticket}" value="${p.tp.toFixed(2)}" class="w-full bg-[#080b14] border border-slate-700 rounded px-2 py-1 text-center text-xs font-bold text-emerald-400">
-                  <button type="button" onclick="stepVal('pos-tp-${p.ticket}', 0.5)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold">+0.5</button>
+                  <button type="button" onclick="stepVal('pos-tp-${p.ticket}', 0.5)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold active:bg-slate-600">+0.5</button>
                 </div>
               </div>
 
-              <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
-                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Close Volume / Tactical</span>
+              <!-- Partial Close & Tactical -->
+              <div class="bg-slate-900/80 p-2 sm:p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+                <span class="text-[9px] uppercase font-bold text-slate-400 block mb-1">Close Volume / Tactical</span>
                 <div class="flex items-center gap-1.5">
                   <input type="number" step="0.01" min="0.01" max="${p.volume}" id="pos-part-vol-${p.ticket}" value="${(p.volume * 0.5).toFixed(2)}" class="w-16 bg-[#080b14] border border-slate-700 rounded px-2 py-1 text-center text-xs text-white">
-                  <button type="button" onclick="handlePartialClose(${p.ticket})" class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold">Close Lots</button>
-                  <button type="button" onclick="handleMoveSingleBE(${p.ticket})" class="px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded text-[10px] font-bold" title="Move this position to BE (+0.40)">Move BE</button>
-                  <button type="button" onclick="closeSinglePosition(${p.ticket})" class="px-2 py-1 bg-rose-500 hover:bg-rose-400 text-black rounded text-[10px] font-black ml-auto">CLOSE</button>
+                  <button type="button" onclick="handlePartialClose(${p.ticket})" class="flex-1 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold">Close Lots</button>
+                  <button type="button" onclick="handleMoveSingleBE(${p.ticket})" class="flex-1 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded text-[10px] font-bold" title="Move to BE">Move BE</button>
+                  <button type="button" onclick="closeSinglePosition(${p.ticket})" class="py-1.5 px-2 bg-rose-500 hover:bg-rose-400 text-black rounded text-[10px] font-black">X</button>
                 </div>
               </div>
 
@@ -1785,20 +1946,25 @@
         `;
       }).join('');
 
-      totalPnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`;
-      totalPnlEl.className = `text-base font-black font-mono ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      if (totalPnlEl) {
+        totalPnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`;
+        totalPnlEl.className = `text-base font-black font-mono ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
     }
 
     function renderSignalsQueue(signals) {
       const container = document.getElementById('queue-signals-list');
-      document.getElementById('badge-pending-count').textContent = `${signals.length} PENDING`;
+      const badgeCount = document.getElementById('badge-pending-count');
+      if (badgeCount) badgeCount.textContent = `${signals.length} PENDING`;
 
       if (signals.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-10 text-slate-500 text-xs font-mono">
-            No pending setups in queue. Awaiting institutional displacement sweeps or click <b>[+ Test Signal]</b>.
-          </div>
-        `;
+        if (container) {
+          container.innerHTML = `
+            <div class="text-center py-8 text-slate-500 text-xs font-mono">
+              No pending setups in queue. Awaiting institutional displacement sweeps or click <b>[+ Test Signal]</b>.
+            </div>
+          `;
+        }
         return;
       }
 
@@ -1818,45 +1984,44 @@
         const zoneDepth = s.zone_depth || (riskDelta - (currentSettings.spread_buffer_usd * 2)).toFixed(2);
 
         return `
-          <div class="p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-l-4 border-l-emerald-500 border-slate-800' : 'border-l-4 border-l-rose-500 border-slate-800'} space-y-3 font-mono text-xs">
+          <div class="p-3.5 sm:p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-l-4 border-l-emerald-500 border-slate-800' : 'border-l-4 border-l-rose-500 border-slate-800'} space-y-2.5 font-mono text-xs">
             <div class="flex items-center justify-between">
               <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}">
                 ${s.action}
               </span>
               <span class="text-slate-300 font-bold">${s.symbol} • ${s.time}</span>
-              <span class="text-amber-400 font-bold text-sm">⚡ ${calcLots} LOTS</span>
+              <span class="text-amber-400 font-bold text-xs sm:text-sm">⚡ ${calcLots} LOTS</span>
             </div>
 
-            <div class="p-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-[11px]">
-              <span><b>Zone:</b> ${zoneName}</span>
-              <span><b>Depth:</b> $${zoneDepth}</span>
+            <div class="p-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px]">
+              <span class="truncate"><b>Zone:</b> ${zoneName}</span>
               <span><b>Risk:</b> $${cashRisk.toFixed(2)} (${riskPct}%)</span>
             </div>
 
-            <div class="grid grid-cols-4 gap-2 p-2.5 rounded bg-slate-950/70 border border-slate-800/60 text-center">
+            <div class="grid grid-cols-4 gap-1 sm:gap-2 p-2 rounded bg-slate-950/70 border border-slate-800/60 text-center">
               <div>
-                <span class="block text-[9px] uppercase text-slate-500">ENTRY</span>
-                <span class="font-bold text-cyan-400">${s.entry.toFixed(2)}</span>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">ENTRY</span>
+                <span class="font-bold text-cyan-400 text-[11px] sm:text-xs">${s.entry.toFixed(2)}</span>
               </div>
               <div>
-                <span class="block text-[9px] uppercase text-slate-500">INVALIDATION SL</span>
-                <span class="font-bold text-rose-400">${s.sl.toFixed(2)}</span>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">SWEEP SL</span>
+                <span class="font-bold text-rose-400 text-[11px] sm:text-xs">${s.sl.toFixed(2)}</span>
               </div>
               <div>
-                <span class="block text-[9px] uppercase text-slate-500">TARGET (1:${currentSettings.target_rr.toFixed(1)})</span>
-                <span class="font-bold text-emerald-400">${dynamicTP}</span>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">TARGET</span>
+                <span class="font-bold text-emerald-400 text-[11px] sm:text-xs">${dynamicTP}</span>
               </div>
               <div>
-                <span class="block text-[9px] uppercase text-slate-500">LOTS</span>
-                <span class="font-bold text-amber-400">${calcLots}</span>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">LOTS</span>
+                <span class="font-bold text-amber-400 text-[11px] sm:text-xs">${calcLots}</span>
               </div>
             </div>
 
             <div class="flex items-center gap-2 pt-1">
-              <button onclick="approveSignal('${s.id}')" class="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition shadow-md shadow-emerald-500/20 text-xs">
-                ✅ APPROVE & DISPATCH
+              <button onclick="approveSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition shadow-md shadow-emerald-500/20 text-xs">
+                ✅ APPROVE
               </button>
-              <button onclick="declineSignal('${s.id}')" class="flex-1 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 font-bold transition text-xs">
+              <button onclick="declineSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 font-bold transition text-xs">
                 ❌ DECLINE
               </button>
             </div>

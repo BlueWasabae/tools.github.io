@@ -2,11 +2,13 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Sign In • BlueX Quantitative Cockpit</title>
   
   <link rel="icon" type="image/png" href="/assets/images/bluex-3d-logo.png">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#060911">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -35,12 +37,20 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: #060911;
       color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
     }
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
     }
     .font-display {
       font-family: 'Outfit', sans-serif;
+    }
+
+    /* Prevent mobile input auto-zoom on iOS */
+    @media (max-width: 768px) {
+      input, button {
+        font-size: 16px !important;
+      }
     }
   </style>
 </head>
@@ -55,7 +65,7 @@
 
   <main class="w-full max-w-[440px] z-10 relative">
     <!-- Brand Logo & Header -->
-    <div class="flex flex-col items-center mb-8 text-center">
+    <div class="flex flex-col items-center mb-6 sm:mb-8 text-center">
       <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 via-amber-400 to-amber-500 p-0.5 shadow-xl shadow-cyan-500/10 mb-3 flex items-center justify-center">
         <div class="w-full h-full bg-[#090d16] rounded-[10px] flex items-center justify-center">
           <span class="font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-amber-400 text-lg">BX</span>
@@ -69,11 +79,11 @@
     </div>
 
     <!-- Shadcn Card Container -->
-    <div class="bg-[#0c101d]/90 backdrop-blur-xl border border-slate-800/90 rounded-2xl p-7 shadow-2xl shadow-black/80 relative">
+    <div class="bg-[#0c101d]/90 backdrop-blur-xl border border-slate-800/90 rounded-2xl p-6 sm:p-7 shadow-2xl shadow-black/80 relative">
       <!-- Glow Accent Line -->
       <div class="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-60"></div>
 
-      <div class="mb-6">
+      <div class="mb-5 sm:mb-6">
         <h2 class="text-lg font-bold text-white tracking-tight">Sign in to your account</h2>
         <p class="text-xs text-slate-400 mt-0.5">Enter your operator credentials to access the sales & execution cockpit.</p>
       </div>
@@ -101,8 +111,11 @@
               name="username" 
               required 
               autocomplete="username"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               value="bluewasabae"
-              class="w-full bg-[#080b14] border border-slate-700/80 rounded-lg px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition font-mono"
+              class="w-full bg-[#080b14] border border-slate-700/80 rounded-lg px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition font-mono"
               placeholder="Enter your username"
             />
             <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500">
@@ -124,14 +137,17 @@
               name="password" 
               required 
               autocomplete="current-password"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               value="Bigduck009!"
-              class="w-full bg-[#080b14] border border-slate-700/80 rounded-lg px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition font-mono"
+              class="w-full bg-[#080b14] border border-slate-700/80 rounded-lg px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition font-mono"
               placeholder="••••••••••••"
             />
             <button 
               type="button" 
               onclick="togglePasswordVisibility()" 
-              class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200 transition"
+              class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-200 p-2 transition cursor-pointer"
               title="Show/hide password"
             >
               <svg id="eyeIconOpen" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -142,9 +158,9 @@
 
         <!-- Remember Me Checkbox -->
         <div class="flex items-center justify-between pt-1">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="rememberMe" checked class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 accent-amber-500">
-            <span class="text-xs text-slate-400">Remember session (14 days)</span>
+          <label class="flex items-center gap-2.5 cursor-pointer py-1">
+            <input type="checkbox" id="rememberMe" checked class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0 focus:ring-offset-0 w-4 h-4 accent-amber-500">
+            <span class="text-xs text-slate-300">Remember session (14 days)</span>
           </label>
         </div>
 
@@ -152,7 +168,7 @@
         <button 
           type="submit" 
           id="submitBtn" 
-          class="w-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-bold py-2.5 px-4 rounded-lg text-xs transition duration-200 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 mt-2"
+          class="w-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-[0.99] text-black font-bold py-3.5 px-4 rounded-xl text-sm transition duration-200 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 mt-3 cursor-pointer"
         >
           <span id="btnText">Sign In to Terminal</span>
           <svg id="btnSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24">
@@ -168,12 +184,12 @@
           <span>OPERATOR CREDENTIALS:</span>
           <span class="text-emerald-400 font-bold">READY</span>
         </p>
-        <div class="bg-[#080b14] p-2.5 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
-          <div>
+        <div class="bg-[#080b14] p-3 rounded-lg border border-slate-800 text-xs font-mono text-slate-300 flex items-center justify-between gap-2">
+          <div class="truncate">
             <span class="text-slate-500">User:</span> <b class="text-white">bluewasabae</b> | 
             <span class="text-slate-500">Pass:</span> <b class="text-white">Bigduck009!</b>
           </div>
-          <button type="button" onclick="fillCredentials()" class="text-amber-400 hover:text-amber-300 text-[10px] font-bold uppercase underline">
+          <button type="button" onclick="fillCredentials()" class="text-amber-400 hover:text-amber-300 text-xs font-bold uppercase underline py-1 px-2 cursor-pointer flex-shrink-0">
             Pre-Fill
           </button>
         </div>
@@ -227,8 +243,8 @@
 
     async function handleLoginSubmit(e) {
       e.preventDefault();
-      const user = document.getElementById('username').value.trim();
-      const pass = document.getElementById('password').value;
+      const user = (document.getElementById('username').value || '').trim().toLowerCase();
+      const pass = (document.getElementById('password').value || '').trim();
 
       const errorAlert = document.getElementById('errorAlert');
       const successAlert = document.getElementById('successAlert');
@@ -243,7 +259,7 @@
       submitBtn.disabled = true;
 
       // 1. Direct Primary Operator Verification
-      if (user === 'bluewasabae' && pass === 'Bigduck009!') {
+      if (user === 'bluewasabae' && (pass === 'Bigduck009!' || pass === 'bigduck009!')) {
         const sessionToken = 'bx_admincn_live_' + btoa('bluewasabae:' + Date.now());
         const operatorProfile = {
           username: 'bluewasabae',
@@ -264,7 +280,7 @@
           apiFetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, password: pass })
+            body: JSON.stringify({ username: 'bluewasabae', password: pass })
           }).catch(() => {});
         } catch(e) {}
 
@@ -274,7 +290,7 @@
 
         setTimeout(() => {
           window.location.href = '/dashboard/sales';
-        }, 500);
+        }, 400);
         return;
       }
 
@@ -296,7 +312,7 @@
           btnText.textContent = "Launching Cockpit...";
           setTimeout(() => {
             window.location.href = '/dashboard/sales';
-          }, 500);
+          }, 400);
           return;
         } else {
           document.getElementById('errorMessage').textContent = data.detail || "Invalid operator username or password.";
@@ -306,7 +322,7 @@
           submitBtn.disabled = false;
         }
       } catch (err) {
-        document.getElementById('errorMessage').textContent = "Invalid username or password. Please use authorized operator credentials.";
+        document.getElementById('errorMessage').textContent = "Invalid operator credentials. Use bluewasabae / Bigduck009!";
         errorAlert.classList.remove('hidden');
         btnText.textContent = "Sign In to Terminal";
         btnSpinner.classList.add('hidden');
