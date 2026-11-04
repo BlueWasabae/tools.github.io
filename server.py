@@ -286,9 +286,58 @@ async def get_state():
 
     acc = mt5_engine.get_account_summary()
     tick = mt5_engine.get_live_tick("XAUUSD")
-    positions = mt5_engine.get_open_positions("XAUUSD")
+    raw_positions = mt5_engine.get_open_positions("XAUUSD")
     pending_orders = mt5_engine.get_pending_orders("XAUUSD")
     deals_summary = mt5_engine.get_deals_history(days=90)
+    active_acc = account_manager.get_active_account()
+
+    # Enrich each position with full MT5 account identity, holding price, and complete risk audit checks
+    enriched_positions = []
+    spread_usd = tick.get("spread_usd", 0.13) if isinstance(tick, dict) else 0.13
+    spread_pts = tick.get("spread_points", 13.0) if isinstance(tick, dict) else 13.0
+    buffer_usd = cockpit_state.get("spread_buffer_usd", 0.40)
+
+    for p in raw_positions:
+        p_copy = dict(p)
+        p_copy["account_name"] = active_acc.get("name", "Primary Trading Account") if active_acc else "Primary Desk"
+        p_copy["account_login"] = active_acc.get("login", acc.get("login", 5058361801)) if active_acc else acc.get("login", 5058361801)
+        p_copy["account_id"] = active_acc.get("id", "acc_default_1") if active_acc else "acc_default_1"
+        p_copy["account_server"] = active_acc.get("server", acc.get("broker", "MetaQuotes-Demo")) if active_acc else acc.get("broker", "MetaQuotes-Demo")
+        p_copy["trade_style"] = active_acc.get("trade_style", "DAY_TRADE") if active_acc else "DAY_TRADE"
+        p_copy["open_price"] = p_copy["price_open"]
+        p_copy["holding_price"] = p_copy["price_current"]
+        p_copy["pnl"] = p_copy["profit"]
+
+        open_p = p_copy["price_open"]
+        curr_p = p_copy["price_current"]
+        sl = p_copy["sl"]
+        tp = p_copy["tp"]
+        vol = p_copy["volume"]
+        is_buy = (p_copy["type"] == "BUY")
+
+        # SL and TP Distance in points (0.01 = 1 point)
+        p_copy["sl_dist_pts"] = round(abs(curr_p - sl) * 100, 1) if sl > 0 else 0.0
+        p_copy["tp_dist_pts"] = round(abs(tp - curr_p) * 100, 1) if tp > 0 else 0.0
+
+        # Cash at risk and cash reward (100 oz contract size per lot)
+        contract_size = 100.0
+        p_copy["cash_risk"] = round(abs(open_p - sl) * contract_size * vol, 2) if sl > 0 else 0.0
+        p_copy["cash_reward"] = round(abs(tp - open_p) * contract_size * vol, 2) if tp > 0 else 0.0
+
+        # Calculated Risk:Reward (RR) ratio
+        risk_pts = abs(open_p - sl)
+        reward_pts = abs(tp - open_p)
+        p_copy["rr_ratio"] = round(reward_pts / max(0.10, risk_pts), 2) if (sl > 0 and tp > 0) else 0.0
+        p_copy["is_rr_valid"] = (p_copy["rr_ratio"] >= 3.0)
+        p_copy["is_be_protected"] = (sl >= open_p) if is_buy else (sl <= open_p and sl > 0)
+        p_copy["drift_usd"] = round((curr_p - open_p) if is_buy else (open_p - curr_p), 2)
+        p_copy["spread_pts"] = spread_pts
+        p_copy["spread_usd"] = spread_usd
+        p_copy["sl_cover_buffer"] = buffer_usd
+
+        enriched_positions.append(p_copy)
+
+    positions = enriched_positions
     enriched_accounts = enrich_accounts_data(acc, positions, pending_orders)
 
     return {

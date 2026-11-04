@@ -84,74 +84,77 @@
   </div>
 
   <!-- Top Executive Header -->
-  <header class="sticky top-0 z-40 glass-panel border-b border-white/[0.08] px-4 sm:px-6 py-3 transition">
-    <div class="max-w-[1720px] mx-auto flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+  <header class="sticky top-0 z-40 glass-panel border-b border-white/[0.08] px-3 sm:px-6 py-2 sm:py-3 transition bg-[#030712]/95 backdrop-blur-md">
+    <div class="max-w-[1720px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
       
-      <!-- Brand & Title -->
-      <div class="flex items-center gap-3">
-        <a href="/dashboard/sales" class="flex items-center gap-2.5 group">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center font-black text-black text-sm shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform">
+      <!-- Top Row on Mobile: Brand + Action Buttons -->
+      <div class="flex items-center justify-between gap-2 w-full sm:w-auto">
+        <a href="/dashboard/sales" class="flex items-center gap-2 group min-w-0">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 flex items-center justify-center font-black text-black text-xs sm:text-sm shadow-lg shadow-amber-500/25 shrink-0 group-hover:scale-105 transition-transform">
             BX
           </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm sm:text-base font-extrabold tracking-tight text-white group-hover:text-amber-400 transition">BlueX Institutional Journal</span>
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">21ST LUXURY</span>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs sm:text-base font-extrabold tracking-tight text-white group-hover:text-amber-400 transition truncate">BlueX Journal</span>
+              <span class="px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">21ST LUXURY</span>
             </div>
-            <p class="text-[10px] sm:text-[11px] text-slate-400 font-mono">Live MT5 Execution Telemetry • Pure Institutional S&D Audit</p>
+            <p class="text-[9px] sm:text-[11px] text-slate-400 font-mono truncate hidden xs:block">Live MT5 S&D Execution Audit</p>
           </div>
         </a>
-      </div>
 
-      <!-- Account Switcher & Single Account Selector -->
-      <div class="flex items-center gap-2 bg-[#090e1a]/90 border border-white/[0.08] rounded-xl px-3 py-1.5 font-mono text-xs shadow-inner">
-        <span class="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Account:</span>
-        <select id="journal-account-filter" onchange="handleJournalAccountChange(this.value)" class="bg-transparent text-cyan-400 font-bold outline-none cursor-pointer text-xs">
-          <option value="acc_default_1" selected>Primary Trading Account (#115076007)</option>
-          <option value="acc_1793737816">FTMO Challenge (#99887766)</option>
-        </select>
-      </div>
-
-      <!-- Live Account Performance Ticker (Real MT5 Data Only) -->
-      <div class="hidden lg:flex items-center gap-5 text-xs font-mono bg-[#090e1a]/80 px-4 py-2 rounded-xl border border-white/[0.08]">
-        <div>
-          <span class="text-slate-400 text-[10px] uppercase block">Net Realized PnL</span>
-          <span class="font-extrabold text-emerald-400 text-xs" id="stats-net-pnl">+$0.93</span>
-        </div>
-        <div class="w-px h-6 bg-white/[0.08]"></div>
-        <div>
-          <span class="text-slate-400 text-[10px] uppercase block">Closed Deals</span>
-          <span class="font-extrabold text-amber-400 text-xs" id="stats-deals-count">1</span>
-        </div>
-        <div class="w-px h-6 bg-white/[0.08]"></div>
-        <div>
-          <span class="text-slate-400 text-[10px] uppercase block">Win Rate</span>
-          <span class="font-extrabold text-purple-400 text-xs" id="stats-win-rate">100.0%</span>
-        </div>
-        <div class="w-px h-6 bg-white/[0.08]"></div>
-        <div>
-          <span class="text-slate-400 text-[10px] uppercase block">Turnover</span>
-          <span class="font-extrabold text-cyan-400 text-xs" id="stats-volume">0.01 L</span>
+        <!-- Action Buttons (Right Aligned on Mobile) -->
+        <div class="flex items-center gap-1.5 shrink-0">
+          <a href="/dashboard/sales" class="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 text-[11px] sm:text-xs font-medium transition flex items-center gap-1 active:scale-95">
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            <span class="hidden sm:inline">Cockpit</span>
+          </a>
+          <button onclick="openNewTradeModal()" class="px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-[11px] sm:text-xs font-bold transition flex items-center gap-1 shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Note</span>
+          </button>
         </div>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-2">
-        <a href="/dashboard/sales" class="px-3.5 py-1.5 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:bg-white/[0.08] text-slate-200 text-xs font-medium transition flex items-center gap-1.5 active:scale-95">
-          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-          <span class="hidden sm:inline">Sales Cockpit</span>
-        </a>
-        <button onclick="openNewTradeModal()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-          <span>Manual Note</span>
-        </button>
+      <!-- Bottom Row on Mobile / Center on Desktop: Account Switcher & Tickers -->
+      <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+        <!-- Account Switcher -->
+        <div class="flex items-center gap-1.5 bg-[#090e1a]/90 border border-white/[0.08] rounded-xl px-2.5 py-1 font-mono text-[11px] sm:text-xs shadow-inner w-full sm:w-auto">
+          <span class="text-slate-400 font-bold uppercase text-[9px] sm:text-[10px] tracking-wider shrink-0">Account:</span>
+          <select id="journal-account-filter" onchange="handleJournalAccountChange(this.value)" class="bg-transparent text-cyan-400 font-bold outline-none cursor-pointer text-[11px] sm:text-xs w-full truncate">
+            <option value="acc_default_1" selected>Primary Trading Account (#5058361801)</option>
+            <option value="acc_1793737816">FTMO Challenge (#99887766)</option>
+          </select>
+        </div>
+
+        <!-- Live Account Performance Ticker (Real MT5 Data Only) -->
+        <div class="hidden lg:flex items-center gap-5 text-xs font-mono bg-[#090e1a]/80 px-4 py-2 rounded-xl border border-white/[0.08]">
+          <div>
+            <span class="text-slate-400 text-[10px] uppercase block">Net Realized PnL</span>
+            <span class="font-extrabold text-emerald-400 text-xs" id="stats-net-pnl">+$0.93</span>
+          </div>
+          <div class="w-px h-6 bg-white/[0.08]"></div>
+          <div>
+            <span class="text-slate-400 text-[10px] uppercase block">Closed Deals</span>
+            <span class="font-extrabold text-amber-400 text-xs" id="stats-deals-count">1</span>
+          </div>
+          <div class="w-px h-6 bg-white/[0.08]"></div>
+          <div>
+            <span class="text-slate-400 text-[10px] uppercase block">Win Rate</span>
+            <span class="font-extrabold text-purple-400 text-xs" id="stats-win-rate">100.0%</span>
+          </div>
+          <div class="w-px h-6 bg-white/[0.08]"></div>
+          <div>
+            <span class="text-slate-400 text-[10px] uppercase block">Turnover</span>
+            <span class="font-extrabold text-cyan-400 text-xs" id="stats-volume">0.01 L</span>
+          </div>
+        </div>
       </div>
 
     </div>
   </header>
 
   <!-- Main Container -->
-  <main class="relative z-10 flex-1 flex flex-col p-4 sm:p-6 max-w-[1720px] w-full mx-auto space-y-6">
+  <main class="relative z-10 flex-1 flex flex-col p-3 sm:p-6 max-w-[1720px] w-full mx-auto space-y-4 sm:space-y-6">
 
     <!-- Section 1: 21st.dev Luxury Visual Analytics (HTML5 Dynamic Canvas) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -203,7 +206,7 @@
         <!-- Radial Donut Canvas & Stats -->
         <div class="flex items-center justify-center py-2 relative">
           <div class="relative w-36 h-36">
-            <canvas id="scenarioRadialCanvas" width="144" height="144" class="block"></canvas>
+            <canvas id="scenarioRadialCanvas" width="144" height="144" class="block w-full h-full" style="width: 144px; height: 144px;"></canvas>
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
               <span id="radial-total-trades" class="text-xl font-black font-mono text-white">1</span>
               <span class="text-[9px] uppercase font-mono text-slate-400 tracking-wider">Executed</span>
@@ -213,28 +216,28 @@
 
         <!-- Scenario Legend & Metrics -->
         <div class="space-y-2 pt-2 border-t border-white/[0.06] text-xs font-mono">
-          <div class="flex items-center justify-between p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-              <span class="text-cyan-300 font-semibold text-[11px]">Sc 1: BOS Continuation</span>
+          <div class="flex items-center justify-between p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shrink-0"></span>
+              <span class="text-cyan-300 font-semibold text-[10px] sm:text-xs">Sc 1: BOS Continuation</span>
             </div>
-            <span id="sc1-stat-count" class="font-bold text-white">0 (0%)</span>
+            <span id="sc1-stat-count" class="font-bold text-white shrink-0 ml-2 text-[10px] sm:text-xs">0 (0%)</span>
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
-              <span class="text-purple-300 font-semibold text-[11px]">Sc 2: CHoCH Reversal</span>
+          <div class="flex items-center justify-between p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-400 shrink-0"></span>
+              <span class="text-purple-300 font-semibold text-[10px] sm:text-xs">Sc 2: CHoCH Reversal</span>
             </div>
-            <span id="sc2-stat-count" class="font-bold text-white">0 (0%)</span>
+            <span id="sc2-stat-count" class="font-bold text-white shrink-0 ml-2 text-[10px] sm:text-xs">0 (0%)</span>
           </div>
 
-          <div class="flex items-center justify-between p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-              <span class="text-amber-300 font-semibold text-[11px]">Sc 3: Range Equilibrium</span>
+          <div class="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
+              <span class="text-amber-300 font-semibold text-[10px] sm:text-xs">Sc 3: Range Equilibrium</span>
             </div>
-            <span id="sc3-stat-count" class="font-bold text-white">1 (100%)</span>
+            <span id="sc3-stat-count" class="font-bold text-white shrink-0 ml-2 text-[10px] sm:text-xs">1 (100%)</span>
           </div>
         </div>
 
@@ -242,16 +245,16 @@
     </div>
 
     <!-- Section 2: View Switcher (Audit Timeline vs Calendar Matrix) -->
-    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 w-full">
       <!-- Tabs -->
-      <div class="inline-flex rounded-xl glass-panel p-1 border border-white/[0.08] text-xs font-mono">
-        <button id="view-tab-timeline" onclick="switchJournalView('timeline')" class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold shadow-md transition active:scale-95 flex items-center gap-2 cursor-pointer">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-          <span>Audit Timeline & Cards</span>
+      <div class="grid grid-cols-2 sm:inline-flex w-full sm:w-auto rounded-xl glass-panel p-1 border border-white/[0.08] text-xs font-mono">
+        <button id="view-tab-timeline" onclick="switchJournalView('timeline')" class="px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-black font-bold shadow-md transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-[11px] sm:text-xs">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          <span class="truncate">Timeline & Cards</span>
         </button>
-        <button id="view-tab-calendar" onclick="switchJournalView('calendar')" class="px-4 py-2 rounded-lg text-slate-300 hover:text-white transition active:scale-95 flex items-center gap-2 cursor-pointer">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>Monthly Calendar</span>
+        <button id="view-tab-calendar" onclick="switchJournalView('calendar')" class="px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-slate-300 hover:text-white transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-[11px] sm:text-xs">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span class="truncate">Monthly Calendar</span>
         </button>
       </div>
 
@@ -843,16 +846,17 @@
         const dpr = window.devicePixelRatio || 1;
         canvas.width = 144 * dpr;
         canvas.height = 144 * dpr;
-        ctx.resetTransform?.();
-        ctx.scale(dpr, dpr);
+        canvas.style.width = '144px';
+        canvas.style.height = '144px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
         ctx.clearRect(0, 0, 144, 144);
 
         let sc1 = 0, sc2 = 0, sc3 = 0;
         activeDeals.forEach(d => {
           const text = (d.comment || '') + ' ' + (d.notes || '') + ' ' + (d.name || '');
-          if (text.includes('Scenario 1') || text.includes('BOS')) sc1++;
-          else if (text.includes('Scenario 2') || text.includes('CHoCH')) sc2++;
+          if (text.includes('Scenario 1') || text.includes('BOS') || text.includes('Sweep')) sc1++;
+          else if (text.includes('Scenario 2') || text.includes('CHoCH') || text.includes('Structure')) sc2++;
           else sc3++;
         });
 
@@ -869,13 +873,14 @@
         if (sc2El) sc2El.textContent = `${sc2} (${Math.round((sc2/total)*100)}%)`;
         if (sc3El) sc3El.textContent = `${sc3} (${Math.round((sc3/total)*100)}%)`;
 
-        const cx = 72, cy = 72, r = 54, lw = 12;
+        const cx = 72, cy = 72, r = 52, lw = 13;
         ctx.lineWidth = lw;
         ctx.lineCap = 'round';
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
         ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.arc(cx, cy, r, 0, Math.PI);
+        ctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
         ctx.stroke();
 
         if (tradesCount === 0) return;
@@ -886,28 +891,23 @@
 
         let startAngle = -Math.PI / 2;
 
-        if (sc1 > 0) {
-          ctx.strokeStyle = '#00ffe0';
+        function drawSegment(color, arcAngle) {
+          if (arcAngle <= 0.01) return;
+          ctx.strokeStyle = color;
           ctx.beginPath();
-          ctx.arc(cx, cy, r, startAngle, startAngle + a1);
+          if (arcAngle >= Math.PI * 2 * 0.98) {
+            ctx.arc(cx, cy, r, 0, Math.PI);
+            ctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
+          } else {
+            ctx.arc(cx, cy, r, startAngle, startAngle + arcAngle);
+            startAngle += arcAngle;
+          }
           ctx.stroke();
-          startAngle += a1;
         }
 
-        if (sc2 > 0) {
-          ctx.strokeStyle = '#c084fc';
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, startAngle, startAngle + a2);
-          ctx.stroke();
-          startAngle += a2;
-        }
-
-        if (sc3 > 0) {
-          ctx.strokeStyle = '#fbbf24';
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, startAngle, startAngle + a3);
-          ctx.stroke();
-        }
+        drawSegment('#00ffe0', a1);
+        drawSegment('#c084fc', a2);
+        drawSegment('#fbbf24', a3);
       } catch (err) {
         console.warn("Radial canvas render handled:", err);
       }
