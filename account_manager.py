@@ -171,6 +171,14 @@ class AccountManager:
         acc = self.get_account_by_id(acc_id)
         if not acc:
             return None
+        if "login" in settings:
+            acc["login"] = int(settings["login"])
+        if "server" in settings:
+            acc["server"] = str(settings["server"])
+        if "last_balance" in settings:
+            acc["last_balance"] = float(settings["last_balance"])
+        if "last_equity" in settings:
+            acc["last_equity"] = float(settings["last_equity"])
         if "name" in settings:
             acc["name"] = settings["name"]
         if "is_active" in settings:

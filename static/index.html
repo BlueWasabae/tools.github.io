@@ -1595,11 +1595,119 @@
       }
     }
 
+    let lastRenderedAccountsIds = [];
+
+    function syncAccountsGridTelemetry(accounts = []) {
+      const container = document.getElementById('dashboard-accounts-grid');
+      if (!container) return;
+
+      const currentIds = accounts.map(a => a.id).sort().join(',');
+      const prevIds = lastRenderedAccountsIds.sort().join(',');
+      if (currentIds !== prevIds || container.children.length === 0) {
+        renderAccountsGrid(accounts);
+        return;
+      }
+
+      // In-place dynamic updates without disrupting active user inputs
+      accounts.forEach(a => {
+        const balEl = document.getElementById(`acc-bal-val-${a.id}`);
+        const eqEl = document.getElementById(`acc-eq-val-${a.id}`);
+        const pnlEl = document.getElementById(`acc-pnl-val-${a.id}`);
+        const marginEl = document.getElementById(`acc-margin-val-${a.id}`);
+        const badgeEl = document.getElementById(`acc-pos-badge-${a.id}`);
+        const listEl = document.getElementById(`acc-pos-list-${a.id}`);
+
+        const bal = parseFloat(a.balance || 0);
+        const eq = parseFloat(a.equity || bal);
+        const flPnl = parseFloat(a.profit || 0);
+        const freeMargin = parseFloat(a.margin_free || eq);
+        const positions = a.positions || [];
+        const pending = a.pending_orders || [];
+        const totalLots = positions.reduce((sum, p) => sum + (parseFloat(p.volume) || 0), 0);
+
+        if (balEl) balEl.textContent = `$${bal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        if (eqEl) {
+          eqEl.textContent = `$${eq.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          eqEl.className = `text-base sm:text-lg font-black ${eq >= bal ? 'text-emerald-400' : 'text-rose-400'} tracking-tight mt-1 font-mono`;
+        }
+        if (pnlEl) {
+          pnlEl.textContent = `${flPnl > 0 ? '+' : ''}$${flPnl.toFixed(2)}`;
+          pnlEl.className = `text-base sm:text-lg font-black ${flPnl > 0 ? 'text-emerald-400' : (flPnl < 0 ? 'text-rose-400' : 'text-slate-400')} tracking-tight mt-1 font-mono`;
+        }
+        if (marginEl) marginEl.textContent = `$${freeMargin.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        if (badgeEl) {
+          badgeEl.textContent = `${positions.length} OPEN (${totalLots.toFixed(2)} Lots)`;
+          badgeEl.className = `px-2 py-0.5 rounded text-[10px] font-bold font-mono ${positions.length > 0 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 animate-pulse' : 'bg-slate-800 text-slate-400'}`;
+        }
+
+        // Render positions inside listEl
+        if (listEl) {
+          if (positions.length === 0 && pending.length === 0) {
+            listEl.innerHTML = `
+              <div class="py-3 px-3 text-center text-slate-500 text-[11px] font-mono bg-slate-950/60 rounded-lg border border-slate-800/60 flex items-center justify-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                <span>No active market exposure • 0.00 Lots • System armed for S&D limit entries</span>
+              </div>
+            `;
+          } else {
+            let html = '';
+            if (positions.length > 0) {
+              html += `
+                <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  ${positions.map(p => `
+                    <div class="p-2 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 text-xs">
+                      <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${p.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}">
+                          ${p.type} ${p.volume}L
+                        </span>
+                        <span class="text-white font-bold">${p.symbol}</span>
+                        <span class="text-slate-400 text-[11px]">#${p.ticket}</span>
+                        <span class="text-slate-400 text-[11px]">@ ${p.price_open.toFixed(2)} → <b class="text-white">${p.price_current.toFixed(2)}</b></span>
+                        <span class="text-slate-500 text-[10px] hidden sm:inline">SL:${p.sl ? p.sl.toFixed(2) : '--'} TP:${p.tp ? p.tp.toFixed(2) : '--'}</span>
+                      </div>
+
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <span class="font-bold font-mono text-xs ${p.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                          ${p.profit >= 0 ? '+' : ''}$${p.profit.toFixed(2)}
+                        </span>
+                        <button type="button" onclick="handleMoveSingleBE(${p.ticket})" class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 hover:bg-amber-500/30 text-[10px] font-bold border border-amber-500/30 cursor-pointer" title="Move this position to Breakeven (+ SL cover)">
+                          BE
+                        </button>
+                        <button type="button" onclick="closeSinglePosition(${p.ticket})" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 hover:bg-rose-500/30 text-[10px] font-bold border border-rose-500/30 cursor-pointer" title="Close this position">
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `;
+            }
+            if (pending.length > 0) {
+              html += `
+                <div class="pt-1.5 border-t border-slate-800/60 space-y-1">
+                  <div class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Active Pending Limits (${pending.length})</div>
+                  ${pending.map(o => `
+                    <div class="p-1.5 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-[11px]">
+                      <span class="text-amber-300 font-bold">${o.type} ${o.volume}L @ ${o.price_open.toFixed(2)}</span>
+                      <span class="text-slate-400">SL: ${o.sl.toFixed(2)} | TP: ${o.tp.toFixed(2)}</span>
+                      <button type="button" onclick="closeSinglePosition(${o.ticket})" class="px-1.5 py-0.5 rounded bg-slate-800 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold cursor-pointer">Cancel</button>
+                    </div>
+                  `).join('')}
+                </div>
+              `;
+            }
+            listEl.innerHTML = html;
+          }
+        }
+      });
+    }
+
     function renderAccountsGrid(accounts = []) {
       const container = document.getElementById('dashboard-accounts-grid');
       const badge = document.getElementById('multicast-badge');
       if (!container) return;
 
+      lastRenderedAccountsIds = accounts.map(a => a.id);
       const activeCount = accounts.filter(a => a.is_active).length;
       if (badge) {
         badge.textContent = `${activeCount} BROADCAST ACTIVE`;
@@ -1619,36 +1727,181 @@
 
       container.innerHTML = accounts.map(a => {
         const isAct = a.is_active;
+        const isConn = Boolean(a.is_connected);
         const isSwing = a.trade_style === 'SWING_TRADE';
         const autoTp = a.auto_tp !== false;
         const tpCap = a.tp_cap_rr ?? (isSwing ? 5.0 : 3.0);
         const tpAdj = a.tp_adjust_pts ?? 0.0;
         const slCover = a.sl_cover_buffer ?? 0.40;
 
+        const bal = parseFloat(a.balance || 0);
+        const eq = parseFloat(a.equity || bal);
+        const flPnl = parseFloat(a.profit || 0);
+        const freeMargin = parseFloat(a.margin_free || eq);
+        const lev = a.leverage || 100;
+        const positions = a.positions || [];
+        const pending = a.pending_orders || [];
+        const totalLots = positions.reduce((sum, p) => sum + (parseFloat(p.volume) || 0), 0);
+
         return `
-          <div class="p-4 rounded-xl bg-[#080b14] border ${isAct ? 'border-cyan-500/40 shadow-lg shadow-cyan-500/5' : 'border-slate-800'} space-y-3 font-mono text-xs">
+          <div class="p-4 sm:p-5 rounded-xl bg-[#080b14] border ${isAct ? 'border-cyan-500/40 shadow-xl shadow-cyan-500/5' : 'border-slate-800'} space-y-3.5 font-mono text-xs transition duration-200" id="acc-card-${a.id}">
             
-            <!-- Header -->
-            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-800/80">
+            <!-- Header & Identity Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-800/80">
               <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-white text-sm truncate">${a.name}</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-white text-sm sm:text-base tracking-tight truncate">${a.name}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1.5 ${isConn ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}">
+                    <span class="w-1.5 h-1.5 rounded-full ${isConn ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}"></span>
+                    <span>${isConn ? 'CONNECTED (MT5 IPC)' : 'STANDBY'}</span>
+                  </span>
                   <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isSwing ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'}">
                     ${isSwing ? 'SWING TRADE' : 'DAY TRADE'}
                   </span>
-                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isAct ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">
-                    ${isAct ? 'ACTIVE' : 'STANDBY'}
-                  </span>
                 </div>
-                <div class="text-[11px] text-slate-400 mt-0.5">
-                  Login: <b class="text-cyan-400">#${a.login}</b> • Server: <b class="text-slate-300">${a.server}</b>
+                <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+                  <span>Login: <b class="text-cyan-400 font-bold">#${a.login}</b></span>
+                  <span>•</span>
+                  <span>Server: <b class="text-slate-300">${a.server}</b></span>
+                  <span>•</span>
+                  <span>Leverage: <b class="text-amber-300">1:${lev}</b></span>
                 </div>
               </div>
 
-              <label class="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-slate-300 bg-slate-900/80 px-2 py-1 rounded border border-slate-800" title="Include in simultaneous multicast limit execution">
-                <input type="checkbox" id="acc-active-${a.id}" ${isAct ? 'checked' : ''} onchange="toggleAccountActive('${a.id}', this.checked)" class="accent-cyan-400 rounded">
-                <span>SYNC</span>
-              </label>
+              <div class="flex items-center gap-2">
+                ${!isConn ? `
+                  <button 
+                    type="button" 
+                    onclick="handleAccountSwitch('${a.id}')" 
+                    class="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
+                    title="Connect MT5 terminal IPC to this account"
+                  >
+                    <span>⚡ Focus Terminal</span>
+                  </button>
+                ` : `
+                  <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                    ✓ Active Desk
+                  </span>
+                `}
+
+                <label class="flex items-center gap-1.5 cursor-pointer text-[10px] font-bold text-slate-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800 hover:border-slate-700 transition" title="Include in simultaneous multicast limit execution">
+                  <input type="checkbox" id="acc-active-${a.id}" ${isAct ? 'checked' : ''} onchange="toggleAccountActive('${a.id}', this.checked)" class="accent-cyan-400 rounded">
+                  <span>SYNC</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- HERO TELEMETRY STRIP (Easy to see Account Balance & Equity) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-gradient-to-br from-[#0c101d] to-[#070a14] border border-slate-800/90 shadow-inner">
+              
+              <!-- Account Balance -->
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80">
+                <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center justify-between">
+                  <span>Account Balance</span>
+                  <span class="text-cyan-400 font-mono text-[10px]">USD</span>
+                </div>
+                <div class="text-base sm:text-lg font-black text-white tracking-tight mt-1 font-mono" id="acc-bal-val-${a.id}">
+                  $${bal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+              </div>
+
+              <!-- Live Net Equity -->
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80">
+                <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center justify-between">
+                  <span>Live Net Equity</span>
+                  <span class="${eq >= bal ? 'text-emerald-400' : 'text-rose-400'} font-bold text-[10px]">
+                    ${eq >= bal ? '▲' : '▼'}
+                  </span>
+                </div>
+                <div class="text-base sm:text-lg font-black ${eq >= bal ? 'text-emerald-400' : 'text-rose-400'} tracking-tight mt-1 font-mono" id="acc-eq-val-${a.id}">
+                  $${eq.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+              </div>
+
+              <!-- Floating P&L -->
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80">
+                <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">
+                  <span>Floating P&L</span>
+                </div>
+                <div class="text-base sm:text-lg font-black ${flPnl > 0 ? 'text-emerald-400' : (flPnl < 0 ? 'text-rose-400' : 'text-slate-400')} tracking-tight mt-1 font-mono" id="acc-pnl-val-${a.id}">
+                  ${flPnl > 0 ? '+' : ''}$${flPnl.toFixed(2)}
+                </div>
+              </div>
+
+              <!-- Free Margin -->
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80">
+                <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center justify-between">
+                  <span>Free Margin</span>
+                  <span class="text-amber-400/90 text-[10px]">1:${lev}</span>
+                </div>
+                <div class="text-base sm:text-lg font-black text-slate-200 tracking-tight mt-1 font-mono" id="acc-margin-val-${a.id}">
+                  $${freeMargin.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+              </div>
+
+            </div>
+
+            <!-- POSITION MONITORING SYSTEM (FOR THIS ACCOUNT) -->
+            <div class="p-3 rounded-xl bg-[#05070e] border border-slate-800/90 space-y-2.5" id="acc-pos-box-${a.id}">
+              <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full ${positions.length > 0 ? 'bg-cyan-400 animate-pulse' : 'bg-slate-600'}"></span>
+                  <span class="font-bold text-white text-xs uppercase tracking-wide">Position Monitoring System</span>
+                </div>
+                <span id="acc-pos-badge-${a.id}" class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${positions.length > 0 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 animate-pulse' : 'bg-slate-800 text-slate-400'}">
+                  ${positions.length} OPEN (${totalLots.toFixed(2)} Lots)
+                </span>
+              </div>
+
+              <div id="acc-pos-list-${a.id}" class="space-y-1.5">
+                ${positions.length === 0 && pending.length === 0 ? `
+                  <div class="py-3 px-3 text-center text-slate-500 text-[11px] font-mono bg-slate-950/60 rounded-lg border border-slate-800/60 flex items-center justify-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                    <span>No active market exposure • 0.00 Lots • System armed for S&D limit entries</span>
+                  </div>
+                ` : `
+                  <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    ${positions.map(p => `
+                      <div class="p-2 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${p.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}">
+                            ${p.type} ${p.volume}L
+                          </span>
+                          <span class="text-white font-bold">${p.symbol}</span>
+                          <span class="text-slate-400 text-[11px]">#${p.ticket}</span>
+                          <span class="text-slate-400 text-[11px]">@ ${p.price_open.toFixed(2)} → <b class="text-white">${p.price_current.toFixed(2)}</b></span>
+                          <span class="text-slate-500 text-[10px] hidden sm:inline">SL:${p.sl ? p.sl.toFixed(2) : '--'} TP:${p.tp ? p.tp.toFixed(2) : '--'}</span>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <span class="font-bold font-mono text-xs ${p.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${p.profit >= 0 ? '+' : ''}$${p.profit.toFixed(2)}
+                          </span>
+                          <button type="button" onclick="handleMoveSingleBE(${p.ticket})" class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 hover:bg-amber-500/30 text-[10px] font-bold border border-amber-500/30 cursor-pointer" title="Move this position to Breakeven (+ SL cover)">
+                            BE
+                          </button>
+                          <button type="button" onclick="closeSinglePosition(${p.ticket})" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 hover:bg-rose-500/30 text-[10px] font-bold border border-rose-500/30 cursor-pointer" title="Close this position">
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+
+                ${pending.length > 0 ? `
+                  <div class="pt-1.5 border-t border-slate-800/60 space-y-1">
+                    <div class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Active Pending Limits (${pending.length})</div>
+                    ${pending.map(o => `
+                      <div class="p-1.5 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between text-[11px]">
+                        <span class="text-amber-300 font-bold">${o.type} ${o.volume}L @ ${o.price_open.toFixed(2)}</span>
+                        <span class="text-slate-400">SL: ${o.sl.toFixed(2)} | TP: ${o.tp.toFixed(2)}</span>
+                        <button type="button" onclick="closeSinglePosition(${o.ticket})" class="px-1.5 py-0.5 rounded bg-slate-800 text-rose-400 hover:bg-rose-500/20 text-[10px] font-bold cursor-pointer">Cancel</button>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+              </div>
             </div>
 
             <!-- Trade Style Selector (Day Trade vs Swing Trade) for THIS Account -->
@@ -1682,7 +1935,7 @@
                 class="py-2 px-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
                 title="Move all profitable positions on this account to Breakeven (+ SL cover buffer)"
               >
-                <span>🛡️ Move BE</span>
+                <span>🛡️ Move All BE</span>
               </button>
 
               <button 
@@ -1691,7 +1944,7 @@
                 class="py-2 px-3 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-98 cursor-pointer"
                 title="Emergency Close 100% of open positions on this account"
               >
-                <span>🚨 Close Position</span>
+                <span>🚨 Close All Positions</span>
               </button>
             </div>
 
@@ -2641,6 +2894,11 @@
 
         // Render Signal Queue
         renderSignalsQueue(data.pending_signals || []);
+
+        // Live Sync Accounts Panel & Per-Account Position Monitoring
+        if (data.accounts_list && Array.isArray(data.accounts_list)) {
+          syncAccountsGridTelemetry(data.accounts_list);
+        }
 
       } catch (err) {}
     }

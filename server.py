@@ -218,6 +218,64 @@ async def serve_journal():
 # COCKPIT STATE & SETTINGS ENDPOINTS
 # ==============================================================================
 
+def enrich_accounts_data(acc_summary: Dict[str, Any], positions: List[Dict[str, Any]], pending_orders: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Enriches all configured accounts with live MT5 telemetry, balance, equity, and active positions."""
+    raw_accounts = account_manager.get_accounts()
+    active_acc = account_manager.get_active_account()
+    enriched = []
+    live_login = acc_summary.get("login") if acc_summary.get("connected") else None
+
+    for a in raw_accounts:
+        a_copy = dict(a)
+        is_connected = False
+        if acc_summary.get("connected"):
+            if live_login and int(a.get("login", 0)) == int(live_login):
+                is_connected = True
+            elif active_acc and a.get("id") == active_acc.get("id"):
+                is_connected = True
+                if live_login and a.get("login") != live_login:
+                    a_copy["login"] = live_login
+                    account_manager.update_account_settings(a["id"], {
+                        "login": live_login,
+                        "server": acc_summary.get("broker", a["server"]),
+                        "last_balance": acc_summary.get("balance", 0.0),
+                        "last_equity": acc_summary.get("equity", 0.0)
+                    })
+
+        a_copy["is_connected"] = is_connected
+
+        if is_connected:
+            a_copy["balance"] = round(float(acc_summary.get("balance", 0.0)), 2)
+            a_copy["equity"] = round(float(acc_summary.get("equity", 0.0)), 2)
+            a_copy["profit"] = round(float(acc_summary.get("profit", 0.0)), 2)
+            a_copy["margin"] = round(float(acc_summary.get("margin", 0.0)), 2)
+            a_copy["margin_free"] = round(float(acc_summary.get("margin_free", 0.0)), 2)
+            a_copy["margin_level"] = round(float(acc_summary.get("margin_level", 0.0)), 2)
+            a_copy["currency"] = acc_summary.get("currency", "USD")
+            a_copy["leverage"] = acc_summary.get("leverage", 100)
+            a_copy["positions"] = positions
+            a_copy["pending_orders"] = pending_orders
+            a_copy["open_positions_count"] = len(positions)
+            a_copy["pending_orders_count"] = len(pending_orders)
+        else:
+            last_bal = round(float(a.get("last_balance", 100000.0)), 2)
+            last_eq = round(float(a.get("last_equity", 100000.0)), 2)
+            a_copy["balance"] = last_bal
+            a_copy["equity"] = last_eq
+            a_copy["profit"] = 0.0
+            a_copy["margin"] = 0.0
+            a_copy["margin_free"] = last_eq
+            a_copy["margin_level"] = 0.0
+            a_copy["currency"] = "USD"
+            a_copy["leverage"] = 100
+            a_copy["positions"] = []
+            a_copy["pending_orders"] = []
+            a_copy["open_positions_count"] = 0
+            a_copy["pending_orders_count"] = 0
+
+        enriched.append(a_copy)
+    return enriched
+
 @app.get("/api/state")
 async def get_state():
     """Returns combined account, market, controls, and pending signals telemetry."""
@@ -231,6 +289,7 @@ async def get_state():
     positions = mt5_engine.get_open_positions("XAUUSD")
     pending_orders = mt5_engine.get_pending_orders("XAUUSD")
     deals_summary = mt5_engine.get_deals_history(days=90)
+    enriched_accounts = enrich_accounts_data(acc, positions, pending_orders)
 
     return {
         "risk_mode": cockpit_state["risk_mode"],
@@ -244,7 +303,7 @@ async def get_state():
         "trade_style": cockpit_state.get("trade_style", "day"),
         "auto_be_actions_recent": auto_be_actions,
         "account": acc,
-        "accounts_list": account_manager.get_accounts(),
+        "accounts_list": enriched_accounts,
         "active_account": account_manager.get_active_account(),
         "tick": tick,
         "positions": positions,
@@ -320,8 +379,11 @@ async def update_settings(settings: SettingsUpdate):
 
 @app.get("/api/accounts")
 async def list_accounts():
+    acc = mt5_engine.get_account_summary()
+    positions = mt5_engine.get_open_positions("XAUUSD")
+    pending_orders = mt5_engine.get_pending_orders("XAUUSD")
     return {
-        "accounts": account_manager.get_accounts(),
+        "accounts": enrich_accounts_data(acc, positions, pending_orders),
         "active_account": account_manager.get_active_account()
     }
 
