@@ -616,7 +616,6 @@ async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, A
         "scenario": scenario_tag,
         "message": "Signal held in queue awaiting operator approval"
     }
-    }
 
 @app.post("/api/signals/simulate")
 async def simulate_institutional_signal():
