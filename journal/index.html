@@ -245,7 +245,7 @@
           <div class="flex items-center justify-between p-2 sm:p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-2.5 h-2.5 rounded-full bg-purple-400 shrink-0"></span>
-              <span class="text-purple-300 font-semibold text-[11px] sm:text-xs truncate">Sc 2: CHoCH Reversal</span>
+              <span class="text-purple-300 font-semibold text-[11px] sm:text-xs truncate">Sc 2: iBOS Reversal</span>
             </div>
             <span id="sc2-stat-count" class="font-bold text-white shrink-0 ml-2 text-[11px] sm:text-xs">0 (0%)</span>
           </div>
@@ -860,7 +860,7 @@
         activeDeals.forEach(d => {
           const text = ((d.comment || '') + ' ' + (d.notes || '') + ' ' + (d.name || '')).toLowerCase();
           if (text.includes('scenario 1') || text.includes('bos') || text.includes('sweep')) sc1++;
-          else if (text.includes('scenario 2') || text.includes('choch') || text.includes('structure')) sc2++;
+          else if (text.includes('scenario 2') || text.includes('ibos') || text.includes('structure')) sc2++;
           else sc3++;
         });
 
@@ -947,8 +947,8 @@
           let scBadge = '<span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">SCENARIO 3 • EQUILIBRIUM</span>';
           if (text.includes('Scenario 1') || text.includes('BOS')) {
             scBadge = '<span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">SCENARIO 1 • BOS CONTINUATION</span>';
-          } else if (text.includes('Scenario 2') || text.includes('CHoCH')) {
-            scBadge = '<span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">SCENARIO 2 • CHOCH REVERSAL</span>';
+          } else if (text.includes('Scenario 2') || text.includes('iBOS')) {
+            scBadge = '<span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">SCENARIO 2 • IBOS REVERSAL</span>';
           }
 
           return `

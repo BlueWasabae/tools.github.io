@@ -2,6 +2,7 @@
 indicator("BlueX SMC Genesis Structural & S&D Indicator [XAU/USD]", 
           shorttitle="BlueX SMC Genesis", 
           overlay=true, 
+          max_bars_back=500,
           max_boxes_count=500, 
           max_lines_count=500, 
           max_labels_count=500)
@@ -36,12 +37,12 @@ color  c_ibos     = input.color(#a855f7, "iBOS Color (Purple)", group=G_COLOR)
 color  c_ft       = input.color(#f59e0b, "FT Color (Amber Gold)", group=G_COLOR)
 color  c_demand   = input.color(#10b981, "Institutional Demand Zone (Emerald)", group=G_COLOR)
 color  c_supply   = input.color(#ef4444, "Institutional Supply Zone (Rose)", group=G_COLOR)
-color  c_dimmed   = input.color(color.new(#64748b, 75), "Invalidated / Mitigated Zone Color", group=G_COLOR)
+color  c_dimmed   = input.color(#64748b, "Invalidated / Mitigated Zone Color", group=G_COLOR)
 
 // ==============================================================================
 // 2. TIMEFRAME CLASSIFICATION & FT FILTER PROTOCOL
 // ==============================================================================
-// Check if current timeframe is 3-minute
+// Check if current chart is 3-minute
 bool isM3 = timeframe.isminutes and timeframe.multiplier == 3
 
 // Mechanical Rule: FT exists ONLY on M15 and higher; NEVER on M3
@@ -66,7 +67,7 @@ type ZoneData
     int    startBar
 
 // Storage for active zones
-var array<ZoneData> activeZones = array.new<ZoneData>()
+var ZoneData[] activeZones = array.new<ZoneData>(0)
 
 // ==============================================================================
 // 4. SWING PIVOT DETECTION (V-SHAPE ENGINE)
@@ -122,27 +123,27 @@ if isConfirmed
     // --------------------------------------------------------------------------
     // BULLISH BREAK: Full Candle-Body Close Above Active Swing High
     // --------------------------------------------------------------------------
-    if not na(activeHigh) and close > activeHigh
+    if not na(activeHigh) and not na(activeHighBar) and close > activeHigh
         isBullBreak := true
         
         // Classify Structural Order: BOS vs iBOS vs FT
         // If broken pivot formed before the last structural event or trend was bearish -> BOS
         if activeHighBar < lastBreakBar or currentTrend <= 0 or structStage == 0
-            breakType  := "BOS"
-            breakColor := c_bosBull
+            breakType   := "BOS"
+            breakColor  := c_bosBull
             structStage := 1 // Progress to seeking iBOS
         else if structStage == 1
-            breakType  := "iBOS"
-            breakColor := c_ibos
-            // If on M3, FT is prohibited: cycle back to seeking BOS/iBOS
+            breakType   := "iBOS"
+            breakColor  := c_ibos
+            // On M3, FT is prohibited: cycle back to seeking BOS/iBOS
             structStage := canDrawFT ? 2 : 1
         else if structStage == 2 and canDrawFT
-            breakType  := "FT"
-            breakColor := c_ft
+            breakType   := "FT"
+            breakColor  := c_ft
             structStage := 1 // Reset back to internal progression
         else
-            breakType  := "BOS"
-            breakColor := c_bosBull
+            breakType   := "BOS"
+            breakColor  := c_bosBull
             structStage := 1
         
         currentTrend := 1
@@ -167,7 +168,7 @@ if isConfirmed
             )
             
             label.new(
-                x=math.round((activeHighBar + bar_index) / 2), 
+                x=int(math.round((activeHighBar + bar_index) / 2)), 
                 y=activeHigh, 
                 text=breakType + " " + currentTfStr, 
                 style=label.style_label_down, 
@@ -181,49 +182,49 @@ if isConfirmed
         // Origin of displacement is the base candle at activeLowBar
         // ----------------------------------------------------------------------
         if i_showSD and not na(activeLowBar) and activeLowBar < bar_index
-            int originOffset = bar_index - activeLowBar
-            if originOffset >= 0 and originOffset < 500
-                // Demand Zone Boundaries:
-                // Bottom: Low of the base candle at swing low
-                // Top: Highest of Open/Close of base candle (candle body top)
-                float dBot = low[originOffset]
-                float dTop = math.max(open[originOffset], close[originOffset])
-                
-                // Ensure valid non-zero zone height
-                if dTop <= dBot
-                    dTop := dBot + (ta.atr(14) * 0.3)
+            int originOffset = math.min(math.max(0, bar_index - activeLowBar), 499)
+            
+            // Demand Zone Boundaries:
+            // Bottom: Low of the base candle at swing low
+            // Top: Highest of Open/Close of base candle (candle body top)
+            float dBot = low[originOffset]
+            float dTop = math.max(open[originOffset], close[originOffset])
+            
+            // Ensure valid non-zero zone height
+            if dTop <= dBot
+                dTop := dBot + (ta.atr(14) * 0.3)
 
-                activeZoneTop := dTop
-                activeZoneBot := dBot
+            activeZoneTop := dTop
+            activeZoneBot := dBot
 
-                box demandBox = box.new(
-                    left=activeLowBar, 
-                    top=dTop, 
-                    right=bar_index + 20, 
-                    bottom=dBot, 
-                    bgcolor=color.new(c_demand, 85), 
-                    border_color=color.new(c_demand, 25), 
-                    border_width=1, 
-                    border_style=line.style_solid
-                )
-                
-                label demandLbl = label.new(
-                    x=bar_index + 10, 
-                    y=dTop, 
-                    text="DEMAND [" + breakType + "] " + currentTfStr, 
-                    style=label.style_label_left, 
-                    color=color.new(c_demand, 10), 
-                    textcolor=color.white, 
-                    size=size.tiny
-                )
+            box demandBox = box.new(
+                left=activeLowBar, 
+                top=dTop, 
+                right=bar_index + 20, 
+                bottom=dBot, 
+                bgcolor=color.new(c_demand, 85), 
+                border_color=color.new(c_demand, 25), 
+                border_width=1, 
+                border_style=line.style_solid
+            )
+            
+            label demandLbl = label.new(
+                x=bar_index + 10, 
+                y=dTop, 
+                text="DEMAND [" + breakType + "] " + currentTfStr, 
+                style=label.style_label_left, 
+                color=color.new(c_demand, 10), 
+                textcolor=color.white, 
+                size=size.tiny
+            )
 
-                // Enforce maximum active zones buffer
-                if array.size(activeZones) >= i_maxZones
-                    ZoneData oldZ = array.shift(activeZones)
-                    box.delete(oldZ.bBox)
-                    label.delete(oldZ.bLbl)
+            // Enforce maximum active zones buffer
+            if array.size(activeZones) >= i_maxZones
+                ZoneData oldZ = array.shift(activeZones)
+                box.delete(oldZ.bBox)
+                label.delete(oldZ.bLbl)
 
-                array.push(activeZones, ZoneData.new(demandBox, demandLbl, dTop, dBot, true, true, activeLowBar))
+            array.push(activeZones, ZoneData.new(demandBox, demandLbl, dTop, dBot, true, true, activeLowBar))
 
         lastBrokenHigh := activeHigh
         activeHigh     := na // Invalidate broken pivot so it is not re-broken
@@ -231,25 +232,25 @@ if isConfirmed
     // --------------------------------------------------------------------------
     // BEARISH BREAK: Full Candle-Body Close Below Active Swing Low
     // --------------------------------------------------------------------------
-    else if not na(activeLow) and close < activeLow
+    else if not na(activeLow) and not na(activeLowBar) and close < activeLow
         isBearBreak := true
         
         // Classify Structural Order: BOS vs iBOS vs FT
         if activeLowBar < lastBreakBar or currentTrend >= 0 or structStage == 0
-            breakType  := "BOS"
-            breakColor := c_bosBear
+            breakType   := "BOS"
+            breakColor  := c_bosBear
             structStage := 1
         else if structStage == 1
-            breakType  := "iBOS"
-            breakColor := c_ibos
+            breakType   := "iBOS"
+            breakColor  := c_ibos
             structStage := canDrawFT ? 2 : 1
         else if structStage == 2 and canDrawFT
-            breakType  := "FT"
-            breakColor := c_ft
+            breakType   := "FT"
+            breakColor  := c_ft
             structStage := 1
         else
-            breakType  := "BOS"
-            breakColor := c_bosBear
+            breakType   := "BOS"
+            breakColor  := c_bosBear
             structStage := 1
 
         currentTrend := -1
@@ -274,7 +275,7 @@ if isConfirmed
             )
             
             label.new(
-                x=math.round((activeLowBar + bar_index) / 2), 
+                x=int(math.round((activeLowBar + bar_index) / 2)), 
                 y=activeLow, 
                 text=breakType + " " + currentTfStr, 
                 style=label.style_label_up, 
@@ -288,49 +289,49 @@ if isConfirmed
         // Origin of displacement is the base candle at activeHighBar
         // ----------------------------------------------------------------------
         if i_showSD and not na(activeHighBar) and activeHighBar < bar_index
-            int originOffset = bar_index - activeHighBar
-            if originOffset >= 0 and originOffset < 500
-                // Supply Zone Boundaries:
-                // Top: High of the base candle at swing high
-                // Bottom: Lowest of Open/Close of base candle (candle body bottom)
-                float sTop = high[originOffset]
-                float sBot = math.min(open[originOffset], close[originOffset])
-                
-                // Ensure valid non-zero zone height
-                if sTop <= sBot
-                    sBot := sTop - (ta.atr(14) * 0.3)
+            int originOffset = math.min(math.max(0, bar_index - activeHighBar), 499)
+            
+            // Supply Zone Boundaries:
+            // Top: High of the base candle at swing high
+            // Bottom: Lowest of Open/Close of base candle (candle body bottom)
+            float sTop = high[originOffset]
+            float sBot = math.min(open[originOffset], close[originOffset])
+            
+            // Ensure valid non-zero zone height
+            if sTop <= sBot
+                sBot := sTop - (ta.atr(14) * 0.3)
 
-                activeZoneTop := sTop
-                activeZoneBot := sBot
+            activeZoneTop := sTop
+            activeZoneBot := sBot
 
-                box supplyBox = box.new(
-                    left=activeHighBar, 
-                    top=sTop, 
-                    right=bar_index + 20, 
-                    bottom=sBot, 
-                    bgcolor=color.new(c_supply, 85), 
-                    border_color=color.new(c_supply, 25), 
-                    border_width=1, 
-                    border_style=line.style_solid
-                )
-                
-                label supplyLbl = label.new(
-                    x=bar_index + 10, 
-                    y=sBot, 
-                    text="SUPPLY [" + breakType + "] " + currentTfStr, 
-                    style=label.style_label_left, 
-                    color=color.new(c_supply, 10), 
-                    textcolor=color.white, 
-                    size=size.tiny
-                )
+            box supplyBox = box.new(
+                left=activeHighBar, 
+                top=sTop, 
+                right=bar_index + 20, 
+                bottom=sBot, 
+                bgcolor=color.new(c_supply, 85), 
+                border_color=color.new(c_supply, 25), 
+                border_width=1, 
+                border_style=line.style_solid
+            )
+            
+            label supplyLbl = label.new(
+                x=bar_index + 10, 
+                y=sBot, 
+                text="SUPPLY [" + breakType + "] " + currentTfStr, 
+                style=label.style_label_left, 
+                color=color.new(c_supply, 10), 
+                textcolor=color.white, 
+                size=size.tiny
+            )
 
-                // Enforce maximum active zones buffer
-                if array.size(activeZones) >= i_maxZones
-                    ZoneData oldZ = array.shift(activeZones)
-                    box.delete(oldZ.bBox)
-                    label.delete(oldZ.bLbl)
+            // Enforce maximum active zones buffer
+            if array.size(activeZones) >= i_maxZones
+                ZoneData oldZ = array.shift(activeZones)
+                box.delete(oldZ.bBox)
+                label.delete(oldZ.bLbl)
 
-                array.push(activeZones, ZoneData.new(supplyBox, supplyLbl, sTop, sBot, false, true, activeHighBar))
+            array.push(activeZones, ZoneData.new(supplyBox, supplyLbl, sTop, sBot, false, true, activeHighBar))
 
         lastBrokenLow := activeLow
         activeLow     := na // Invalidate broken pivot so it is not re-broken
@@ -339,7 +340,7 @@ if isConfirmed
 // 6. ZONE INVALIDATION & EXTENSION ENGINE
 // ==============================================================================
 if isConfirmed and array.size(activeZones) > 0
-    for i = array.size(activeZones) - 1 to 0
+    for i = 0 to array.size(activeZones) - 1
         ZoneData z = array.get(activeZones, i)
         if z.isActive
             // Invalidation Check: Full candle body closes through the zone boundary
@@ -351,7 +352,7 @@ if isConfirmed and array.size(activeZones) > 0
 
             if invalidated
                 z.isActive := false
-                box.set_bgcolor(z.bBox, c_dimmed)
+                box.set_bgcolor(z.bBox, color.new(c_dimmed, 85))
                 box.set_border_color(z.bBox, color.new(#64748b, 40))
                 box.set_border_style(z.bBox, line.style_dotted)
                 box.set_right(z.bBox, bar_index)
@@ -366,17 +367,15 @@ if isConfirmed and array.size(activeZones) > 0
 // ==============================================================================
 // 7. HIGHER-TIMEFRAME (HTF) ANCHOR SECURITY ENGINE (STRICT NON-REPAINTING)
 // ==============================================================================
-f_get_htf_pivots(int len) =>
-    float htfHi = ta.pivothigh(high, len, len)[1]
-    float htfLo = ta.pivotlow(low, len, len)[1]
-    float htfCl = close[1]
-    float htfOp = open[1]
-    [htfHi, htfLo, htfCl, htfOp]
+f_calc_htf_pivots(int pLen) =>
+    float pHi = ta.pivothigh(high, pLen, pLen)
+    float pLo = ta.pivotlow(low, pLen, pLen)
+    [pHi[1], pLo[1]]
 
-[htf1Hi, htf1Lo, htf1Cl, htf1Op] = request.security(
+[htf1Hi, htf1Lo] = request.security(
     syminfo.tickerid, 
     htfTf1, 
-    f_get_htf_pivots(i_pivotLen), 
+    f_calc_htf_pivots(i_pivotLen), 
     barmerge.gaps_off, 
     barmerge.lookahead_off
 )
@@ -393,10 +392,11 @@ var line htfHighLine = na
 var line htfLowLine  = na
 
 if i_showHTF and barstate.islast
+    int startX = math.max(0, bar_index - 60)
     if not na(lastHtf1High)
         line.delete(htfHighLine)
         htfHighLine := line.new(
-            x1=bar_index - 60, y1=lastHtf1High, 
+            x1=startX, y1=lastHtf1High, 
             x2=bar_index + 20, y2=lastHtf1High, 
             color=color.new(c_supply, 30), 
             style=line.style_dashed, 
@@ -405,7 +405,7 @@ if i_showHTF and barstate.islast
     if not na(lastHtf1Low)
         line.delete(htfLowLine)
         htfLowLine := line.new(
-            x1=bar_index - 60, y1=lastHtf1Low, 
+            x1=startX, y1=lastHtf1Low, 
             x2=bar_index + 20, y2=lastHtf1Low, 
             color=color.new(c_demand, 30), 
             style=line.style_dashed, 
