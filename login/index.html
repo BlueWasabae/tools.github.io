@@ -46,15 +46,20 @@
       font-family: 'Outfit', sans-serif;
     }
 
-    /* Prevent mobile input auto-zoom on iOS */
+    /* Prevent mobile input auto-zoom on iOS & enable touch scroll */
     @media (max-width: 768px) {
+      html, body {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
       input, button {
         font-size: 16px !important;
       }
     }
   </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#060911] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
+<body class="min-h-screen flex items-center justify-center p-4 relative overflow-x-hidden overflow-y-auto bg-[#060911] text-slate-100 antialiased selection:bg-amber-500 selection:text-black">
 
   <!-- Ambient Radiant Glow Background -->
   <div class="absolute inset-0 pointer-events-none overflow-hidden">

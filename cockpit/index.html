@@ -99,9 +99,46 @@
     .animate-pulse-subtle {
       animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+
+    /* Mobile Fluid Scrolling Mandate */
+    @media (max-width: 1023px) {
+      html, body {
+        height: auto !important;
+        min-height: 100% !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-y !important;
+      }
+      .app-viewport-wrapper {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+      }
+      main {
+        height: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+    }
+    @media (min-width: 1024px) {
+      html, body {
+        height: 100vh;
+        overflow: hidden;
+      }
+      .app-viewport-wrapper {
+        height: 100vh;
+        overflow: hidden;
+      }
+      main {
+        height: calc(100vh - 4rem);
+        overflow-y: auto;
+      }
+    }
   </style>
 </head>
-<body class="min-h-screen bg-[#060911] text-slate-100 flex overflow-hidden antialiased selection:bg-amber-500 selection:text-black">
+<body class="min-h-screen bg-[#060911] text-slate-100 flex overflow-x-hidden overflow-y-auto lg:overflow-hidden antialiased selection:bg-amber-500 selection:text-black">
 
   <!-- ========================================================================= -->
   <!-- MOBILE SIDEBAR BACKDROP OVERLAY -->
@@ -237,7 +274,7 @@
   <!-- ========================================================================= -->
   <!-- MAIN APPLICATION VIEWPORT -->
   <!-- ========================================================================= -->
-  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+  <div class="flex-1 flex flex-col min-w-0 app-viewport-wrapper overflow-x-hidden overflow-y-visible lg:overflow-hidden">
     
     <!-- TOP NAVIGATION BAR (SHADCN ADMINCN HEADER) -->
     <header class="h-14 sm:h-16 px-3 sm:px-6 bg-[#090d18]/90 backdrop-blur border-b border-slate-800/80 flex items-center justify-between gap-3 z-20 flex-shrink-0">
@@ -254,6 +291,12 @@
           <span class="text-amber-400 font-bold" id="nav-tick-bid-mobile">3949.68</span>
           <span class="text-slate-600">/</span>
           <span class="text-cyan-400 text-[10px]" id="nav-tick-spread-mobile">13pt</span>
+        </button>
+
+        <!-- Mobile Trade Style Quick Toggle (Day / Swing) -->
+        <button onclick="toggleTradeStyle()" id="mobile-trade-style-chip" class="flex md:hidden items-center gap-1 bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 text-[10px] font-mono font-bold text-cyan-400 hover:border-cyan-400 transition" title="Tap to toggle Day / Swing Trade">
+          <span id="mobile-trade-style-icon">⚡</span>
+          <span id="mobile-trade-style-label">DAY</span>
         </button>
 
         <div class="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400">
@@ -286,7 +329,14 @@
       <!-- Right: Controls & Profile -->
       <div class="flex items-center gap-2">
         
-        <!-- Multi-Account MT5 Dropdown (Hidden on smallest mobile, in bottom dock) -->
+        <!-- Desktop Trade Style Switch (DAY vs SWING) -->
+        <button id="header-trade-style-btn" onclick="toggleTradeStyle()" class="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 text-xs font-mono font-bold cursor-pointer hover:border-cyan-400 transition" title="Toggle between Day Trade (1:3 RR) and Swing Trade (1:5+ RR)">
+          <span id="header-trade-style-icon">⚡</span>
+          <span id="header-trade-style-label" class="text-cyan-400">DAY</span>
+          <span class="hidden md:inline text-[9px] text-slate-500 font-semibold">MODE</span>
+        </button>
+
+        <!-- Multi-Account MT5 Dropdown -->
         <div class="hidden sm:flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1">
           <span class="text-[10px] font-mono text-slate-500">ACC:</span>
           <select id="header-account-select" onchange="handleAccountSwitch(this.value)" class="bg-transparent text-xs font-mono text-cyan-400 font-bold outline-none cursor-pointer">
@@ -317,7 +367,7 @@
     <!-- ======================================================================= -->
     <!-- SCROLLABLE DASHBOARD CONTENT AREA -->
     <!-- ======================================================================= -->
-    <main class="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 pb-24 lg:pb-8">
+    <main class="flex-1 p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 pb-28 lg:pb-8">
       
       <!-- DASHBOARD PAGE HEADER (ADMINCN STYLE) -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -445,6 +495,67 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- LIVE INSTITUTIONAL MARKET ANALYSIS SCRIPT (XAU/USD) -->
+      <!-- ===================================================================== -->
+      <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl relative overflow-hidden" id="market-analysis-section">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80 mb-3.5">
+          <div class="flex items-center gap-2.5">
+            <div class="w-3 h-3 rounded-full bg-cyan-400 shadow-md shadow-cyan-400/40 animate-pulse-subtle"></div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm sm:text-base font-bold text-white tracking-tight">Institutional Market Analysis • XAU/USD</h3>
+                <span class="px-2 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold uppercase" id="analysis-style-badge">
+                  DAY TRADE HORIZON
+                </span>
+              </div>
+              <p class="text-[10px] sm:text-xs text-slate-400 font-mono mt-0.5">
+                Pure Institutional S&D Framework • Mechanical BOS & CHoCH Mapping • Zero Retail Indicators
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="copyAnalysisScript()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-slate-700 hover:border-cyan-500/50 text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95" title="Copy script to clipboard">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              <span id="copy-btn-text">Copy Script</span>
+            </button>
+            <button onclick="refreshAnalysisScript()" class="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-mono font-bold transition active:scale-95" title="Re-evaluate live structure">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Structural Metrics Strip -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3.5 font-mono text-xs">
+          <div class="bg-[#080b14] border border-slate-800/80 rounded-lg p-2.5">
+            <span class="text-[9px] text-slate-500 block uppercase">4H Macro Structure</span>
+            <span class="font-bold text-emerald-400 text-xs sm:text-sm">BULLISH BOS ↑</span>
+            <span class="text-[9px] text-slate-400 block mt-0.5">Target: 3,988.50 BSL</span>
+          </div>
+          <div class="bg-[#080b14] border border-slate-800/80 rounded-lg p-2.5">
+            <span class="text-[9px] text-slate-500 block uppercase">1H Structural Base</span>
+            <span class="font-bold text-cyan-400 text-xs sm:text-sm">DBR DEMAND ORIGIN</span>
+            <span class="text-[9px] text-slate-400 block mt-0.5">Key Zone: 3,941.50 - 3,944.50</span>
+          </div>
+          <div class="bg-[#080b14] border border-slate-800/80 rounded-lg p-2.5">
+            <span class="text-[9px] text-slate-500 block uppercase">15M Ingress / Dealing</span>
+            <span class="font-bold text-amber-400 text-xs sm:text-sm">COMPRESSION / PULLBACK</span>
+            <span class="text-[9px] text-slate-400 block mt-0.5">Dealing Range: 3,948 - 3,968</span>
+          </div>
+          <div class="bg-[#080b14] border border-slate-800/80 rounded-lg p-2.5">
+            <span class="text-[9px] text-slate-500 block uppercase">Active Invalidation SL</span>
+            <span class="font-bold text-rose-400 text-xs sm:text-sm">3,936.50</span>
+            <span class="text-[9px] text-slate-400 block mt-0.5">Structural Swing Extreme</span>
+          </div>
+        </div>
+
+        <!-- Script Paragraph Box -->
+        <div class="bg-[#080b14] border border-slate-800/90 rounded-xl p-3.5 sm:p-4 text-xs font-mono text-slate-300 leading-relaxed space-y-2 select-text" id="analysis-script-content">
+          <!-- Dynamically populated analysis text -->
+        </div>
       </div>
 
       <!-- ===================================================================== -->
@@ -625,7 +736,7 @@
           
           <!-- Signal Approval Queue (Positions Approve) -->
           <div class="bg-[#0c101d] border border-slate-800/80 rounded-xl p-4 sm:p-5 shadow-xl" id="signals-queue-panel">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800/80 mb-3 gap-2.5">
               <div class="flex items-center gap-2">
                 <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
                 <h3 class="text-base font-bold text-white">Signal Approval Queue</h3>
@@ -633,15 +744,43 @@
                   0 PENDING
                 </span>
               </div>
-              <button onclick="generateSimulatedSignal()" class="text-xs font-mono text-cyan-400 hover:text-cyan-300 transition">
-                + Simulate Setup
+              
+              <!-- Quick Scenario Triggers -->
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] font-mono text-slate-500 hidden sm:inline">GENERATE:</span>
+                <button onclick="triggerScenarioSignal(1)" class="px-2 py-1 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Generate Scenario 1: BOS Continuation">
+                  + Sc 1 (BOS)
+                </button>
+                <button onclick="triggerScenarioSignal(2)" class="px-2 py-1 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Generate Scenario 2: CHoCH Reversal">
+                  + Sc 2 (CHoCH)
+                </button>
+                <button onclick="triggerScenarioSignal(3)" class="px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold transition active:scale-95" title="Generate Scenario 3: Range Rejection">
+                  + Sc 3 (Range)
+                </button>
+              </div>
+            </div>
+
+            <!-- Scenario Filter Pills Strip -->
+            <div class="flex items-center gap-1.5 pb-3 border-b border-slate-800/50 mb-3.5 overflow-x-auto">
+              <span class="text-[10px] font-mono text-slate-500 uppercase flex-shrink-0">Filter:</span>
+              <button onclick="setScenarioFilter('all')" id="btn-filter-all" class="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex-shrink-0 transition">
+                ALL
+              </button>
+              <button onclick="setScenarioFilter(1)" id="btn-filter-1" class="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-cyan-400 flex-shrink-0 transition">
+                SCENARIO 1 (BOS)
+              </button>
+              <button onclick="setScenarioFilter(2)" id="btn-filter-2" class="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-purple-400 flex-shrink-0 transition">
+                SCENARIO 2 (CHOCH)
+              </button>
+              <button onclick="setScenarioFilter(3)" id="btn-filter-3" class="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-amber-400 flex-shrink-0 transition">
+                SCENARIO 3 (RANGE)
               </button>
             </div>
 
             <!-- Signal Cards Container -->
             <div id="queue-signals-list" class="space-y-3">
               <div class="text-center py-8 text-slate-500 text-xs font-mono">
-                No pending setups in queue. Awaiting institutional displacement sweeps or click <b>[+ Test Signal]</b>.
+                No pending setups in queue. Awaiting institutional displacement or select Scenario 1, 2, or 3 above.
               </div>
             </div>
           </div>
@@ -813,6 +952,20 @@
         <div>
           <label class="block text-slate-400 mb-1 text-[10px]">TERMINAL64.EXE PATH (OPTIONAL)</label>
           <input type="text" id="new-acc-path" placeholder="C:\Program Files\MetaTrader 5\terminal64.exe" class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-400 mb-1 text-[10px]">EXECUTION STYLE / HORIZON</label>
+            <select id="new-acc-trade-style" class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+              <option value="day">⚡ Day Trade (Intraday M1/M5/M15 • 1:3 RR)</option>
+              <option value="swing">🌊 Swing Trade (Macro H1/H4 • 1:5+ RR)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1 text-[10px]">DEFAULT RISK (%)</label>
+            <input type="number" step="0.1" min="0.1" max="5.0" id="new-acc-risk" value="0.5" class="w-full bg-[#080b14] border border-slate-800 rounded px-3 py-2 text-white outline-none focus:border-amber-400">
+          </div>
         </div>
 
         <button type="submit" class="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs uppercase tracking-wider transition">
@@ -1195,6 +1348,136 @@
       showToast(`Execution: ${mode}`);
     }
 
+    // Trade Style Horizon Management (DAY vs SWING)
+    let currentTradeStyle = localStorage.getItem('bx_trade_style') || 'day';
+
+    function updateTradeStyleUI() {
+      const isDay = currentTradeStyle === 'day';
+      const labelText = isDay ? 'DAY' : 'SWING';
+      const iconText = isDay ? '⚡' : '🌊';
+      
+      // Header Desktop Pill
+      const headerBtn = document.getElementById('header-trade-style-btn');
+      const headerIcon = document.getElementById('header-trade-style-icon');
+      const headerLabel = document.getElementById('header-trade-style-label');
+      if (headerLabel) {
+        headerLabel.textContent = labelText;
+        headerLabel.className = isDay ? 'text-cyan-400 font-bold' : 'text-amber-400 font-bold';
+      }
+      if (headerIcon) headerIcon.textContent = iconText;
+      if (headerBtn) {
+        headerBtn.className = isDay 
+          ? 'flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded-lg px-2.5 py-1 text-xs font-mono font-bold cursor-pointer hover:border-cyan-400 transition'
+          : 'flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1 text-xs font-mono font-bold cursor-pointer hover:border-amber-400 transition';
+      }
+
+      // Mobile Header Chip
+      const mobileIcon = document.getElementById('mobile-trade-style-icon');
+      const mobileLabel = document.getElementById('mobile-trade-style-label');
+      if (mobileLabel) {
+        mobileLabel.textContent = labelText;
+        mobileLabel.className = isDay ? 'text-cyan-400' : 'text-amber-400';
+      }
+      if (mobileIcon) mobileIcon.textContent = iconText;
+
+      // Analysis Badge
+      const analysisBadge = document.getElementById('analysis-style-badge');
+      if (analysisBadge) {
+        analysisBadge.textContent = isDay ? 'DAY TRADE HORIZON (M1-M15)' : 'SWING TRADE HORIZON (H1-H4)';
+        analysisBadge.className = isDay 
+          ? 'px-2 py-0.5 rounded text-[9px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-bold uppercase'
+          : 'px-2 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold uppercase';
+      }
+
+      renderAnalysisScriptContent();
+    }
+
+    async function toggleTradeStyle() {
+      currentTradeStyle = currentTradeStyle === 'day' ? 'swing' : 'day';
+      localStorage.setItem('bx_trade_style', currentTradeStyle);
+      
+      const targetRR = currentTradeStyle === 'day' ? 3.0 : 5.0;
+      currentSettings.target_rr = targetRR;
+      currentSettings.trade_style = currentTradeStyle;
+      
+      try {
+        await apiFetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trade_style: currentTradeStyle, target_rr: targetRR })
+        });
+      } catch(e) {}
+
+      updateTradeStyleUI();
+      showToast(currentTradeStyle === 'day' 
+        ? '⚡ Switched to DAY TRADE mode (1:3 RR Intraday)' 
+        : '🌊 Switched to SWING TRADE mode (1:5+ RR Macro Swing)');
+      refreshState();
+    }
+
+    // Live Institutional Market Analysis Script
+    function renderAnalysisScriptContent() {
+      const container = document.getElementById('analysis-script-content');
+      if (!container) return;
+
+      const bid = (latestTick && latestTick.bid) ? latestTick.bid : 3958.25;
+      const ask = (latestTick && latestTick.ask) ? latestTick.ask : 3958.38;
+      const spreadPts = (latestTick && latestTick.spread_points) ? latestTick.spread_points : 13;
+      const isDay = currentTradeStyle === 'day';
+
+      if (isDay) {
+        container.innerHTML = `
+          <p class="text-slate-200">
+            <b class="text-cyan-400">INSTITUTIONAL DAY TRADE ANALYSIS (XAU/USD):</b> 
+            Gold is actively trading at <b class="text-amber-400">${bid.toFixed(2)}</b> / <b class="text-amber-400">${ask.toFixed(2)}</b> (Spread: ${spreadPts} pts). 
+            The 4H macro bias remains <b class="text-emerald-400">BULLISH</b> confirmed by full candle-body Break of Structure (BOS) past the 3,928.00 swing high. 
+            On the 15M/5M intraday execution horizon, price is compressing above the <b class="text-cyan-400">3,941.50 – 3,944.50 Drop-Base-Rally (DBR)</b> displacement origin.
+          </p>
+          <p class="text-slate-300">
+            <b class="text-amber-400">EXECUTION DIRECTIVES:</b> Priority is given to pro-trend limit orders at discount demand origin. 
+            Invalidation SL is anchored structurally at <b class="text-rose-400">3,936.50</b> (below the swing extreme). 
+            Day Trade Target 1 is set at <b class="text-emerald-400">3,968.00</b> (+2.5 RR), with Target 2 targeting Asian session liquidity at <b class="text-emerald-400">3,978.50</b> (+5.2 RR). 
+            Wait for structural retest at the base; eliminate chase entries at market highs.
+          </p>
+        `;
+      } else {
+        container.innerHTML = `
+          <p class="text-slate-200">
+            <b class="text-amber-400">INSTITUTIONAL SWING TRADE ANALYSIS (XAU/USD):</b> 
+            Spot Gold at <b class="text-amber-400">${bid.toFixed(2)}</b> is expanding within a multi-session institutional expansion cycle. 
+            The 4H and Daily structural frameworks confirm unbroken trend continuation characterized by sequential BOS candle-body closes with zero opposing Change of Character (CHoCH).
+          </p>
+          <p class="text-slate-300">
+            <b class="text-cyan-400">MACRO HORIZON TARGETS:</b> The primary institutional re-accumulation base resides at the 1H/4H <b class="text-cyan-400">3,938.00 – 3,944.00 DBR origin</b>. 
+            Macro Invalidation SL is maintained at <b class="text-rose-400">3,924.00</b> (last major structural low prior to multi-week displacement). 
+            Swing Target 1 is the dealing range extreme at <b class="text-emerald-400">3,988.50</b>, with Target 2 targeting external Buy-Side Liquidity (BSL) at <b class="text-emerald-400">4,015.00 – 4,025.00</b> (1:6.5+ RR). 
+            Risk sizing is capped at 0.50% equity with dynamic breakeven protection upon securing +2.0 RR.
+          </p>
+        `;
+      }
+    }
+
+    function copyAnalysisScript() {
+      const container = document.getElementById('analysis-script-content');
+      const btnText = document.getElementById('copy-btn-text');
+      if (!container) return;
+      const text = container.innerText.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        if (btnText) btnText.textContent = "Copied!";
+        showToast("📋 Institutional Analysis Script copied to clipboard!");
+        setTimeout(() => {
+          if (btnText) btnText.textContent = "Copy Script";
+        }, 2000);
+      }).catch(() => {
+        showToast("Analysis script ready to copy.");
+      });
+    }
+
+    function refreshAnalysisScript() {
+      renderAnalysisScriptContent();
+      showToast("🔄 Institutional analysis recalculated with live quote.");
+    }
+
     async function syncSettings() {
       try {
         await apiFetch('/api/settings', {
@@ -1223,22 +1506,28 @@
 
         const container = document.getElementById('accounts-list-container');
         if (container) {
-          container.innerHTML = registeredAccounts.map(a => `
-            <div class="flex items-center justify-between p-2 rounded-lg bg-[#080b14] border ${a.is_active ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-800'}">
-              <div>
-                <div class="font-bold ${a.is_active ? 'text-cyan-400' : 'text-white'}">
-                  ${a.name} ${a.is_active ? '<span class="text-emerald-400 text-[10px]">[ACTIVE]</span>' : ''}
+          container.innerHTML = registeredAccounts.map(a => {
+            const isSwing = a.trade_style === 'swing';
+            const styleBadge = `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold ${isSwing ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'}">${isSwing ? 'SWING' : 'DAY'}</span>`;
+            return `
+              <div class="flex items-center justify-between p-2 rounded-lg bg-[#080b14] border ${a.is_active ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-800'}">
+                <div>
+                  <div class="font-bold flex items-center gap-1.5 ${a.is_active ? 'text-cyan-400' : 'text-white'}">
+                    <span>${a.name}</span>
+                    ${styleBadge}
+                    ${a.is_active ? '<span class="text-emerald-400 text-[10px]">[ACTIVE]</span>' : ''}
+                  </div>
+                  <div class="text-[10px] text-slate-400">
+                    Login: #${a.login} | Server: ${a.server}
+                  </div>
                 </div>
-                <div class="text-[10px] text-slate-400">
-                  Login: #${a.login} | Server: ${a.server}
+                <div class="flex items-center gap-1.5">
+                  ${!a.is_active ? `<button onclick="handleAccountSwitch('${a.id}')" class="px-2 py-1 rounded bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/30 text-[10px] font-bold">SWITCH</button>` : ''}
+                  ${registeredAccounts.length > 1 ? `<button onclick="handleDeleteAccount('${a.id}')" class="px-2 py-1 rounded bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold">DEL</button>` : ''}
                 </div>
               </div>
-              <div class="flex items-center gap-1.5">
-                ${!a.is_active ? `<button onclick="handleAccountSwitch('${a.id}')" class="px-2 py-1 rounded bg-cyan-500/15 text-cyan-400 hover:bg-cyan-500/30 text-[10px] font-bold">SWITCH</button>` : ''}
-                ${registeredAccounts.length > 1 ? `<button onclick="handleDeleteAccount('${a.id}')" class="px-2 py-1 rounded bg-rose-500/15 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold">DEL</button>` : ''}
-              </div>
-            </div>
-          `).join('');
+            `;
+          }).join('');
         }
       } catch (e) {
         const headerSelect = document.getElementById('header-account-select');
@@ -1271,12 +1560,14 @@
       const password = document.getElementById('new-acc-password').value;
       const server = document.getElementById('new-acc-server').value;
       const path = document.getElementById('new-acc-path').value;
+      const trade_style = document.getElementById('new-acc-trade-style') ? document.getElementById('new-acc-trade-style').value : 'day';
+      const risk_pct = document.getElementById('new-acc-risk') ? parseFloat(document.getElementById('new-acc-risk').value) : 0.5;
 
       try {
         const res = await apiFetch('/api/accounts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, login, password, server, path })
+          body: JSON.stringify({ name, login, password, server, path, trade_style, risk_pct })
         });
         const d = await res.json();
         showToast(`Account #${login} registered!`);
@@ -1297,15 +1588,62 @@
       } catch (e) {}
     }
 
-    // Tactical Actions
-    async function generateSimulatedSignal() {
+    // Tactical Actions & Scenario Options
+    let activeScenarioFilter = 'all';
+    let latestSignalsQueue = [];
+
+    function setScenarioFilter(sc) {
+      activeScenarioFilter = sc;
+      ['all', 1, 2, 3].forEach(id => {
+        const btn = document.getElementById(`btn-filter-${id}`);
+        if (btn) {
+          if (activeScenarioFilter === id) {
+            btn.className = "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex-shrink-0 transition";
+          } else {
+            btn.className = "px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white flex-shrink-0 transition";
+          }
+        }
+      });
+      renderSignalsQueue(latestSignalsQueue);
+    }
+
+    function roundNum(val, dec = 2) {
+      return parseFloat(Number(val).toFixed(dec));
+    }
+
+    async function triggerScenarioSignal(scNum = 1) {
       try {
-        await apiFetch('/api/signals/simulate', { method: 'POST' });
-        showToast("Institutional S&D signal generated!");
+        await apiFetch(`/api/signals/simulate?scenario=${scNum}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario: scNum })
+        });
+        showToast(`⚡ Institutional Scenario ${scNum} signal generated!`);
         refreshState();
       } catch (e) {
-        showToast("⚡ Institutional XAU/USD sweep signal simulated!");
+        // Client-side fallback if bridge is offline
+        const bid = latestTick.bid || 3958.25;
+        const isSc2 = (scNum === 2);
+        const mockSig = {
+          id: 'sc_' + Math.random().toString(36).substr(2, 6),
+          time: new Date().toLocaleTimeString(),
+          symbol: 'XAUUSD',
+          action: isSc2 ? 'SELL_LIMIT' : 'BUY_LIMIT',
+          scenario_id: scNum,
+          scenario_name: scNum === 2 ? 'Scenario 2: CHoCH Reversal' : (scNum === 3 ? 'Scenario 3: Range Equilibrium' : 'Scenario 1: BOS Continuation'),
+          zone_type: isSc2 ? 'RBD Supply Zone' : (scNum === 3 ? 'Range Extreme' : 'DBR Demand Zone'),
+          entry: isSc2 ? roundNum(bid + 8.5) : (scNum === 3 ? roundNum(bid - 12.0) : roundNum(bid - 5.5)),
+          sl: isSc2 ? roundNum(bid + 13.0) : (scNum === 3 ? roundNum(bid - 16.5) : roundNum(bid - 9.5)),
+          comment: `Simulated Scenario ${scNum}`
+        };
+        latestSignalsQueue.unshift(mockSig);
+        renderSignalsQueue(latestSignalsQueue);
+        showToast(`⚡ Institutional Scenario ${scNum} simulated!`);
       }
+    }
+
+    function generateSimulatedSignal() {
+      triggerScenarioSignal(1);
     }
 
     async function approveSignal(id) {
@@ -1610,7 +1948,7 @@
       { ticket: '892341', client: 'Limeng Sovann', symbol: 'XAU/USD', side: 'BUY', volume: '1.50', range: '2742.50 → 2754.20', status: 'COMPLETED', pnl: 1755.00, time: '2026-02-04 05:22:14' },
       { ticket: '892340', client: 'London Liquidity Desk', symbol: 'XAU/USD', side: 'BUY', volume: '2.00', range: '2740.10 → 2752.15', status: 'COMPLETED', pnl: 2410.00, time: '2026-02-04 05:14:02' },
       { ticket: '892338', client: 'Tokyo Arbitrage Desk', symbol: 'XAU/USD', side: 'SELL', volume: '0.75', range: '2758.40 → 2748.00', status: 'COMPLETED', pnl: 780.00, time: '2026-02-04 04:45:19' },
-      { ticket: '892335', client: 'Zurich Sweep Engine', symbol: 'XAU/USD', side: 'BUY', volume: '1.20', range: '2738.20 → 2749.40', status: 'BREAKEVEN', pnl: 48.00, time: '2026-02-04 03:30:10' },
+      { ticket: '892335', client: 'Zurich Execution Engine', symbol: 'XAU/USD', side: 'BUY', volume: '1.20', range: '2738.20 → 2749.40', status: 'BREAKEVEN', pnl: 48.00, time: '2026-02-04 03:30:10' },
       { ticket: '892330', client: 'Asia-Pacific Desk', symbol: 'XAU/USD', side: 'BUY', volume: '3.00', range: '2735.00 → 2747.00', status: 'COMPLETED', pnl: 3600.00, time: '2026-02-04 02:11:55' },
       { ticket: '892328', client: 'Limeng Sovann', symbol: 'XAU/USD', side: 'SELL', volume: '1.00', range: '2762.10 → 2750.00', status: 'COMPLETED', pnl: 1210.00, time: '2026-02-03 23:18:40' }
     ];
@@ -1777,6 +2115,7 @@
         }
 
         if (data.tick && !data.tick.error) {
+          latestTick = data.tick;
           const bidVal = data.tick.bid.toFixed(2);
           const askVal = data.tick.ask.toFixed(2);
           const spreadPts = data.tick.spread_points;
@@ -1792,6 +2131,8 @@
 
           if (mobileBid) mobileBid.textContent = bidVal;
           if (mobileSpread) mobileSpread.textContent = `${spreadPts}pt`;
+
+          renderAnalysisScriptContent();
         } else {
           const bidEl = document.getElementById('nav-tick-bid');
           const askEl = document.getElementById('nav-tick-ask');
@@ -1955,20 +2296,31 @@
     function renderSignalsQueue(signals) {
       const container = document.getElementById('queue-signals-list');
       const badgeCount = document.getElementById('badge-pending-count');
-      if (badgeCount) badgeCount.textContent = `${signals.length} PENDING`;
+      latestSignalsQueue = signals || [];
 
-      if (signals.length === 0) {
-        if (container) {
-          container.innerHTML = `
-            <div class="text-center py-8 text-slate-500 text-xs font-mono">
-              No pending setups in queue. Awaiting institutional displacement sweeps or click <b>[+ Test Signal]</b>.
-            </div>
-          `;
-        }
+      // Filter signals by active scenario filter
+      let filtered = latestSignalsQueue;
+      if (activeScenarioFilter !== 'all') {
+        filtered = latestSignalsQueue.filter(s => {
+          const scId = s.scenario_id || (s.comment?.includes('Scenario 2') ? 2 : (s.comment?.includes('Scenario 3') ? 3 : 1));
+          return scId == activeScenarioFilter;
+        });
+      }
+
+      if (badgeCount) badgeCount.textContent = `${filtered.length} PENDING`;
+
+      if (!container) return;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-slate-500 text-xs font-mono">
+            No pending setups matching active filter. Awaiting institutional displacement or select <b>[+ Sc 1 / Sc 2 / Sc 3]</b> above.
+          </div>
+        `;
         return;
       }
 
-      container.innerHTML = signals.map(s => {
+      container.innerHTML = filtered.map(s => {
         const isBuy = s.action.toUpperCase().includes('BUY');
         const equity = latestAccountState.equity || 100000.0;
         const riskPct = currentSettings.custom_risk_pct || 0.50;
@@ -1980,15 +2332,24 @@
           ? (s.entry + (riskDelta * currentSettings.target_rr)).toFixed(2)
           : (s.entry - (riskDelta * currentSettings.target_rr)).toFixed(2);
 
+        const scId = s.scenario_id || (s.comment?.includes('Scenario 2') ? 2 : (s.comment?.includes('Scenario 3') ? 3 : 1));
+        const scBadge = scId === 2 
+          ? '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">SCENARIO 2 • CHOCH REVERSAL</span>'
+          : (scId === 3 
+            ? '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">SCENARIO 3 • RANGE EQUILIBRIUM</span>'
+            : '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">SCENARIO 1 • BOS CONTINUATION</span>');
+
         const zoneName = s.zone_type || (isBuy ? "DBR Demand Zone" : "RBD Supply Zone");
-        const zoneDepth = s.zone_depth || (riskDelta - (currentSettings.spread_buffer_usd * 2)).toFixed(2);
 
         return `
           <div class="p-3.5 sm:p-4 rounded-xl bg-[#080b14] border ${isBuy ? 'border-l-4 border-l-emerald-500 border-slate-800' : 'border-l-4 border-l-rose-500 border-slate-800'} space-y-2.5 font-mono text-xs">
-            <div class="flex items-center justify-between">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}">
-                ${s.action}
-              </span>
+            <div class="flex items-center justify-between flex-wrap gap-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isBuy ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'}">
+                  ${s.action}
+                </span>
+                ${scBadge}
+              </div>
               <span class="text-slate-300 font-bold">${s.symbol} • ${s.time}</span>
               <span class="text-amber-400 font-bold text-xs sm:text-sm">⚡ ${calcLots} LOTS</span>
             </div>
@@ -2004,7 +2365,7 @@
                 <span class="font-bold text-cyan-400 text-[11px] sm:text-xs">${s.entry.toFixed(2)}</span>
               </div>
               <div>
-                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">SWEEP SL</span>
+                <span class="block text-[8px] sm:text-[9px] uppercase text-slate-500">STOP LOSS (SL)</span>
                 <span class="font-bold text-rose-400 text-[11px] sm:text-xs">${s.sl.toFixed(2)}</span>
               </div>
               <div>
@@ -2018,10 +2379,10 @@
             </div>
 
             <div class="flex items-center gap-2 pt-1">
-              <button onclick="approveSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition shadow-md shadow-emerald-500/20 text-xs">
+              <button onclick="approveSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition shadow-md shadow-emerald-500/20 text-xs active:scale-95">
                 ✅ APPROVE
               </button>
-              <button onclick="declineSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 font-bold transition text-xs">
+              <button onclick="declineSignal('${s.id}')" class="flex-1 py-2.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 font-bold transition text-xs active:scale-95">
                 ❌ DECLINE
               </button>
             </div>
@@ -2033,6 +2394,9 @@
     // Initialize Viewport
     window.addEventListener('DOMContentLoaded', () => {
       enforceAuth();
+      updateTradeStyleUI();
+      renderAnalysisScriptContent();
+      setScenarioFilter('all');
       loadAccountsList();
       initSalesOverviewChart();
       renderRecentSalesCompact();

@@ -58,6 +58,7 @@ cockpit_state = {
     "spread_buffer_usd": 0.40,      # Dynamic spread buffer
     "auto_be_enabled": False,       # Auto BE after holding >= +2.0 RR
     "auto_be_trigger_rr": 2.0,      # Trigger multiple (+2.0 RR)
+    "trade_style": "day",           # "day" (Intraday M1-M15) or "swing" (Macro H1-H4)
     "pending_signals": [],          # Queue for manual position approvals
     "execution_log": []             # Historical audit log
 }
@@ -76,6 +77,7 @@ class SettingsUpdate(BaseModel):
     spread_buffer_usd: Optional[float] = None
     auto_be_enabled: Optional[bool] = None
     auto_be_trigger_rr: Optional[float] = None
+    trade_style: Optional[str] = None  # "day" or "swing"
 
 @app.on_event("startup")
 async def startup_event():
@@ -285,7 +287,18 @@ async def update_settings(settings: SettingsUpdate):
     if settings.auto_be_trigger_rr is not None and 1.0 <= settings.auto_be_trigger_rr <= 5.0:
         cockpit_state["auto_be_trigger_rr"] = settings.auto_be_trigger_rr
 
-    logger.info(f"[SETTINGS UPDATED] Risk: {cockpit_state['custom_risk_pct']}% | Mode: {cockpit_state['risk_mode']} | Auto-BE: {cockpit_state['auto_be_enabled']} | RR: 1:{cockpit_state['target_rr']}")
+    if settings.trade_style in ["day", "swing"]:
+        cockpit_state["trade_style"] = settings.trade_style
+        if settings.trade_style == "swing":
+            if settings.target_rr is None:
+                cockpit_state["target_rr"] = 5.0
+                config.MIN_RR_RATIO = 5.0
+        elif settings.trade_style == "day":
+            if settings.target_rr is None:
+                cockpit_state["target_rr"] = 3.0
+                config.MIN_RR_RATIO = 3.0
+
+    logger.info(f"[SETTINGS UPDATED] Risk: {cockpit_state['custom_risk_pct']}% | Mode: {cockpit_state['risk_mode']} | Auto-BE: {cockpit_state['auto_be_enabled']} | RR: 1:{cockpit_state['target_rr']} | Style: {cockpit_state.get('trade_style', 'day')}")
     return {"status": "success", "settings": cockpit_state}
 
 # ==============================================================================
@@ -619,25 +632,66 @@ async def handle_tradingview_webhook(payload: Union[InstitutionalAlertPayload, A
     }
 
 @app.post("/api/signals/simulate")
-async def simulate_institutional_signal():
-    """Generates a test institutional zone setup on Gold for operator approval testing."""
+async def simulate_institutional_signal(scenario: int = 1, request: Request = None):
+    """Generates an institutional setup on Gold across Scenarios 1, 2, and 3."""
+    scenario_choice = scenario
+    if request:
+        try:
+            body = await request.json()
+            if isinstance(body, dict) and "scenario" in body:
+                scenario_choice = int(body["scenario"])
+        except Exception:
+            pass
+
     tick = mt5_engine.get_live_tick("XAUUSD")
-    current_price = tick.get("bid", 3925.00) if not tick.get("error") else 3925.00
+    current_price = tick.get("bid", 3950.00) if not tick.get("error") else 3950.00
     spread_buf = cockpit_state["spread_buffer_usd"]
-
-    # Generate synthetic DBR Demand Zone below price
-    zone_top = round(current_price - 5.0, 2)
-    zone_bottom = round(zone_top - 3.80, 2)
-    entry = round(zone_top + spread_buf, 2)
-    sl = round(zone_bottom - spread_buf, 2)
-    risk_delta = entry - sl
     rr = cockpit_state["target_rr"]
-    tp1 = round(entry + (risk_delta * rr), 2)
-    tp2 = round(entry + (risk_delta * (rr + 2.0)), 2)
-
     risk_pct = cockpit_state["custom_risk_pct"]
     acc = mt5_engine.get_account_summary()
-    equity = acc.get("equity", 10000.0) if acc.get("connected") else 10000.0
+    equity = acc.get("equity", 100000.0) if acc.get("connected") else 100000.0
+
+    if scenario_choice == 2:
+        # Scenario 2: CHoCH Structural Reversal (Bearish displacement from overhead origin)
+        action = "SELL_LIMIT"
+        scenario_name = "Scenario 2: CHoCH Reversal"
+        zone_type = "RBD Supply Zone (Displacement Origin)"
+        zone_top = round(current_price + 9.50, 2)
+        zone_bottom = round(zone_top - 3.80, 2)
+        entry = round(zone_bottom - spread_buf, 2)
+        sl = round(zone_top + spread_buf, 2)
+        risk_delta = max(0.50, abs(sl - entry))
+        tp1 = round(entry - (risk_delta * rr), 2)
+        tp2 = round(entry - (risk_delta * (rr + 2.0)), 2)
+        comment = "Scenario 2: CHoCH Reversal RBD"
+    elif scenario_choice == 3:
+        # Scenario 3: Range Equilibrium Rejection (Lower Range Dealing Extreme)
+        action = "BUY_LIMIT"
+        scenario_name = "Scenario 3: Range Equilibrium"
+        zone_type = "Range Extreme (Equilibrium Rejection)"
+        zone_top = round(current_price - 12.00, 2)
+        zone_bottom = round(zone_top - 4.20, 2)
+        entry = round(zone_top + spread_buf, 2)
+        sl = round(zone_bottom - spread_buf, 2)
+        risk_delta = max(0.50, abs(entry - sl))
+        tp1 = round(entry + (risk_delta * 2.5), 2)
+        tp2 = round(entry + (risk_delta * 4.0), 2)
+        comment = "Scenario 3: Range Equilibrium Base"
+    else:
+        # Scenario 1 (Default): Pro-Trend BOS Continuation (DBR Demand Base)
+        scenario_choice = 1
+        action = "BUY_LIMIT"
+        scenario_name = "Scenario 1: BOS Continuation"
+        zone_type = "DBR Demand Zone (Displacement Base)"
+        zone_top = round(current_price - 5.50, 2)
+        zone_bottom = round(zone_top - 3.80, 2)
+        entry = round(zone_top + spread_buf, 2)
+        sl = round(zone_bottom - spread_buf, 2)
+        risk_delta = max(0.50, abs(entry - sl))
+        tp1 = round(entry + (risk_delta * rr), 2)
+        tp2 = round(entry + (risk_delta * (rr + 2.0)), 2)
+        comment = "Scenario 1: BOS Continuation DBR"
+
     cash_risk = equity * (risk_pct / 100.0)
     calc_lots = round(max(0.01, min(100.0, cash_risk / (risk_delta * 100.0))), 2)
 
@@ -646,11 +700,13 @@ async def simulate_institutional_signal():
         "id": sig_id,
         "time": time.strftime("%H:%M:%S"),
         "symbol": "XAUUSD",
-        "action": "BUY_LIMIT",
-        "zone_type": "DBR Demand",
+        "action": action,
+        "scenario_id": scenario_choice,
+        "scenario_name": scenario_name,
+        "zone_type": zone_type,
         "zone_top": zone_top,
         "zone_bottom": zone_bottom,
-        "zone_depth": round(zone_top - zone_bottom, 2),
+        "zone_depth": round(abs(zone_top - zone_bottom), 2),
         "entry": entry,
         "sl": sl,
         "tp1": tp1,
@@ -658,12 +714,12 @@ async def simulate_institutional_signal():
         "risk_pct": risk_pct,
         "cash_risk": round(cash_risk, 2),
         "calc_lots": calc_lots,
-        "magic": 880101,
-        "comment": "Institutional DBR Demand Origin"
+        "magic": 880100 + scenario_choice,
+        "comment": comment
     }
 
     cockpit_state["pending_signals"].insert(0, test_sig)
-    logger.info(f"[TEST SIGNAL SIMULATED] ID: {sig_id} | Entry: {entry} | Lots: {calc_lots} | Risk: ${cash_risk:.2f}")
+    logger.info(f"[TEST SIGNAL SIMULATED] {scenario_name} | ID: {sig_id} | {action} @ {entry} | SL: {sl} | Lots: {calc_lots}")
     return {"status": "success", "signal": test_sig}
 
 # MT4 Polling Endpoint
