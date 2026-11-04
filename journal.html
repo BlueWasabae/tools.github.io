@@ -211,16 +211,19 @@
 
         <!-- Radial Donut SVG Vector & Stats -->
         <div class="flex items-center justify-center py-3 relative">
-          <div class="relative w-36 h-36 flex items-center justify-center">
-            <svg class="w-36 h-36 -rotate-90 transform" viewBox="0 0 144 144">
+          <div class="relative w-36 h-36 min-w-[144px] min-h-[144px] shrink-0 flex items-center justify-center">
+            <svg class="w-36 h-36 min-w-[144px] min-h-[144px] block shrink-0" width="144" height="144" viewBox="0 0 144 144" style="overflow: visible;">
               <!-- Base Subtle Track Ring -->
-              <circle cx="72" cy="72" r="52" fill="none" stroke="rgba(255, 255, 255, 0.08)" stroke-width="12" />
-              <!-- Arc 1: Scenario 1 (Cyan) -->
-              <circle id="svg-sc1-arc" cx="72" cy="72" r="52" fill="none" stroke="#00ffe0" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 326.73" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
-              <!-- Arc 2: Scenario 2 (Purple) -->
-              <circle id="svg-sc2-arc" cx="72" cy="72" r="52" fill="none" stroke="#c084fc" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 326.73" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
-              <!-- Arc 3: Scenario 3 (Amber - Pre-rendered Active) -->
-              <circle id="svg-sc3-arc" cx="72" cy="72" r="52" fill="none" stroke="#fbbf24" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.73 0" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
+              <circle cx="72" cy="72" r="52" fill="none" stroke="rgba(255, 255, 255, 0.10)" stroke-width="12" />
+              <!-- Native SVG Rotation Group (Rotated 90deg CCW around native center 72,72 for universal mobile Safari/Chrome rendering) -->
+              <g transform="rotate(-90 72 72)">
+                <!-- Arc 1: Scenario 1 (Cyan) -->
+                <circle id="svg-sc1-arc" cx="72" cy="72" r="52" fill="none" stroke="#00ffe0" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 326.73" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
+                <!-- Arc 2: Scenario 2 (Purple) -->
+                <circle id="svg-sc2-arc" cx="72" cy="72" r="52" fill="none" stroke="#c084fc" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 326.73" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
+                <!-- Arc 3: Scenario 3 (Amber - Pre-rendered Active) -->
+                <circle id="svg-sc3-arc" cx="72" cy="72" r="52" fill="none" stroke="#fbbf24" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.73 0" stroke-dashoffset="0" class="transition-all duration-700 ease-out" />
+              </g>
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
               <span id="radial-total-trades" class="text-xl font-black font-mono text-white">1</span>
