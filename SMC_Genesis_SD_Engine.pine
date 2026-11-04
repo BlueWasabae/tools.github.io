@@ -1,0 +1,451 @@
+//@version=5
+indicator("BlueX SMC Genesis Structural & S&D Indicator [XAU/USD]", 
+          shorttitle="BlueX SMC Genesis", 
+          overlay=true, 
+          max_boxes_count=500, 
+          max_lines_count=500, 
+          max_labels_count=500)
+
+// ==============================================================================
+// 1. INPUT CONFIGURATION & OPERATIONAL HIERARCHY
+// ==============================================================================
+string G_MODE     = "Trading Architecture & Timeframe Hierarchy"
+string i_mode     = input.string("Day Trade (M15 / M3)", "Operational Mode", 
+                     options=["Day Trade (M15 / M3)", "Swing Trade (H4 / H1 / M15)"], group=G_MODE)
+int    i_pivotLen = input.int(5, "Swing Pivot Strength (V-Shape Length)", minval=2, maxval=20, group=G_MODE,
+                     tooltip="Number of bars left and right required to validate structural V-shape swing highs and lows.")
+
+string G_VIS      = "Structural Visibility & Engine Elements"
+bool   i_showBOS  = input.bool(true, "Show BOS (Break of Structure - Trend Continuation)", group=G_VIS)
+bool   i_showIBOS = input.bool(true, "Show iBOS (Internal Break of Structure)", group=G_VIS)
+bool   i_showFT   = input.bool(true, "Show FT (Failure to Traverse - Micro Break, M15+ Only)", group=G_VIS,
+                     tooltip="Failure to Traverse (FT) represents internal breaks within an iBOS move. Strictly deactivated on M3.")
+bool   i_showSD   = input.bool(true, "Show Institutional Supply & Demand Zones (Zone Candle Model)", group=G_VIS)
+bool   i_showHTF  = input.bool(true, "Show Multi-Timeframe HTF Anchors", group=G_VIS)
+bool   i_showHUD  = input.bool(true, "Display Institutional Telemetry HUD Table", group=G_VIS)
+int    i_maxZones = input.int(10, "Maximum Retained Active Zones", minval=2, maxval=25, group=G_VIS)
+
+string G_COLOR    = "Institutional Visual Palette (Dark-Mode High Contrast)"
+color  c_bosBull  = input.color(#00ffe0, "Bullish BOS / Structure Color", group=G_COLOR)
+color  c_bosBear  = input.color(#ff3366, "Bearish BOS / Structure Color", group=G_COLOR)
+color  c_ibos     = input.color(#a855f7, "iBOS Color (Purple)", group=G_COLOR)
+color  c_ft       = input.color(#f59e0b, "FT Color (Amber Gold)", group=G_COLOR)
+color  c_demand   = input.color(#10b981, "Institutional Demand Zone (Emerald)", group=G_COLOR)
+color  c_supply   = input.color(#ef4444, "Institutional Supply Zone (Rose)", group=G_COLOR)
+color  c_dimmed   = input.color(color.new(#64748b, 75), "Invalidated / Mitigated Zone Color", group=G_COLOR)
+
+// ==============================================================================
+// 2. TIMEFRAME CLASSIFICATION & FT FILTER PROTOCOL
+// ==============================================================================
+// Check if current timeframe is 3-minute
+bool isM3 = timeframe.isminutes and timeframe.multiplier == 3
+
+// Mechanical Rule: FT exists ONLY on M15 and higher; NEVER on M3
+bool canDrawFT = not isM3 and i_showFT
+
+// Resolve HTF string based on selected operational mode
+string htfTf1 = i_mode == "Day Trade (M15 / M3)" ? "15" : "60"
+string htfTf2 = i_mode == "Day Trade (M15 / M3)" ? "60" : "240"
+string currentTfStr = timeframe.isminutes ? str.tostring(timeframe.multiplier) + "M" : 
+                      timeframe.isdaily ? "D" : timeframe.period
+
+// ==============================================================================
+// 3. USER DEFINED TYPES (UDTs)
+// ==============================================================================
+type ZoneData
+    box    bBox
+    label  bLbl
+    float  topPrice
+    float  botPrice
+    bool   isDemand
+    bool   isActive
+    int    startBar
+
+// Storage for active zones
+var array<ZoneData> activeZones = array.new<ZoneData>()
+
+// ==============================================================================
+// 4. SWING PIVOT DETECTION (V-SHAPE ENGINE)
+// ==============================================================================
+// Pure non-repainting structural pivots with verified symmetrical wings
+float rawPivotHigh = ta.pivothigh(high, i_pivotLen, i_pivotLen)
+float rawPivotLow  = ta.pivotlow(low, i_pivotLen, i_pivotLen)
+
+// State tracking for structural hierarchy
+var float activeHigh       = na
+var int   activeHighBar    = na
+var float activeLow        = na
+var int   activeLowBar     = na
+
+var float lastBrokenHigh   = na
+var float lastBrokenLow    = na
+
+// Structural State Machine:
+// 0 = Seeking BOS (Initial or Trend Reset)
+// 1 = Seeking iBOS (BOS completed; watching new pullback pivot)
+// 2 = Seeking FT   (iBOS completed; watching secondary micro pivot on M15+)
+var int   structStage      = 0 
+var int   currentTrend     = 0 // 1 = Bullish, -1 = Bearish
+var int   lastBreakBar     = 0
+
+// Track newly formed pivots confirmed on the current bar
+if not na(rawPivotHigh)
+    int pBar = bar_index - i_pivotLen
+    activeHigh    := rawPivotHigh
+    activeHighBar := pBar
+
+if not na(rawPivotLow)
+    int pBar = bar_index - i_pivotLen
+    activeLow    := rawPivotLow
+    activeLowBar := pBar
+
+// ==============================================================================
+// 5. MECHANICAL STRUCTURE BREAK ENGINE (BOS, iBOS, FT)
+// ==============================================================================
+// Strict Non-Repainting Mandate: Confirmation ONLY on candle body close of confirmed bar
+bool isConfirmed = barstate.isconfirmed
+
+bool isBullBreak = false
+bool isBearBreak = false
+string breakType = ""
+color breakColor = color.white
+
+if isConfirmed
+    // --------------------------------------------------------------------------
+    // BULLISH BREAK: Full Candle-Body Close Above Active Swing High
+    // --------------------------------------------------------------------------
+    if not na(activeHigh) and close > activeHigh
+        isBullBreak := true
+        
+        // Classify Structural Order: BOS vs iBOS vs FT
+        // If broken pivot formed before the last structural event or trend was bearish -> BOS
+        if activeHighBar < lastBreakBar or currentTrend <= 0 or structStage == 0
+            breakType  := "BOS"
+            breakColor := c_bosBull
+            structStage := 1 // Progress to seeking iBOS
+        else if structStage == 1
+            breakType  := "iBOS"
+            breakColor := c_ibos
+            // If on M3, FT is prohibited: cycle back to seeking BOS/iBOS
+            structStage := canDrawFT ? 2 : 1
+        else if structStage == 2 and canDrawFT
+            breakType  := "FT"
+            breakColor := c_ft
+            structStage := 1 // Reset back to internal progression
+        else
+            breakType  := "BOS"
+            breakColor := c_bosBull
+            structStage := 1
+        
+        currentTrend := 1
+        lastBreakBar := bar_index
+
+        // Visual Line & Label Drawing
+        bool allowDraw = (breakType == "BOS" and i_showBOS) or 
+                         (breakType == "iBOS" and i_showIBOS) or 
+                         (breakType == "FT" and canDrawFT)
+
+        if allowDraw
+            lineStyle = breakType == "BOS" ? line.style_solid : 
+                        breakType == "iBOS" ? line.style_dashed : line.style_dotted
+            lineWidth = breakType == "BOS" ? 2 : 1
+            
+            line.new(
+                x1=activeHighBar, y1=activeHigh, 
+                x2=bar_index, y2=activeHigh, 
+                color=breakColor, 
+                style=lineStyle, 
+                width=lineWidth
+            )
+            
+            label.new(
+                x=math.round((activeHighBar + bar_index) / 2), 
+                y=activeHigh, 
+                text=breakType + " " + currentTfStr, 
+                style=label.style_label_down, 
+                color=color.new(breakColor, 20), 
+                textcolor=color.white, 
+                size=size.tiny
+            )
+
+        // ----------------------------------------------------------------------
+        // ZONE CANDLE MODEL: DEMAND ZONE CREATION
+        // Origin of displacement is the base candle at activeLowBar
+        // ----------------------------------------------------------------------
+        if i_showSD and not na(activeLowBar) and activeLowBar < bar_index
+            int originOffset = bar_index - activeLowBar
+            if originOffset >= 0 and originOffset < 500
+                // Demand Zone Boundaries:
+                // Bottom: Low of the base candle at swing low
+                // Top: Highest of Open/Close of base candle (candle body top)
+                float dBot = low[originOffset]
+                float dTop = math.max(open[originOffset], close[originOffset])
+                
+                // Ensure valid non-zero zone height
+                if dTop <= dBot
+                    dTop := dBot + (ta.atr(14) * 0.3)
+
+                box demandBox = box.new(
+                    left=activeLowBar, 
+                    top=dTop, 
+                    right=bar_index + 20, 
+                    bottom=dBot, 
+                    bgcolor=color.new(c_demand, 85), 
+                    border_color=color.new(c_demand, 25), 
+                    border_width=1, 
+                    border_style=line.style_solid
+                )
+                
+                label demandLbl = label.new(
+                    x=bar_index + 10, 
+                    y=dTop, 
+                    text="DEMAND [" + breakType + "] " + currentTfStr, 
+                    style=label.style_label_left, 
+                    color=color.new(c_demand, 10), 
+                    textcolor=color.white, 
+                    size=size.tiny
+                )
+
+                // Enforce maximum active zones buffer
+                if array.size(activeZones) >= i_maxZones
+                    ZoneData oldZ = array.shift(activeZones)
+                    box.delete(oldZ.bBox)
+                    label.delete(oldZ.bLbl)
+
+                array.push(activeZones, ZoneData.new(demandBox, demandLbl, dTop, dBot, true, true, activeLowBar))
+
+        lastBrokenHigh := activeHigh
+        activeHigh     := na // Invalidate broken pivot so it is not re-broken
+
+    // --------------------------------------------------------------------------
+    // BEARISH BREAK: Full Candle-Body Close Below Active Swing Low
+    // --------------------------------------------------------------------------
+    else if not na(activeLow) and close < activeLow
+        isBearBreak := true
+        
+        // Classify Structural Order: BOS vs iBOS vs FT
+        if activeLowBar < lastBreakBar or currentTrend >= 0 or structStage == 0
+            breakType  := "BOS"
+            breakColor := c_bosBear
+            structStage := 1
+        else if structStage == 1
+            breakType  := "iBOS"
+            breakColor := c_ibos
+            structStage := canDrawFT ? 2 : 1
+        else if structStage == 2 and canDrawFT
+            breakType  := "FT"
+            breakColor := c_ft
+            structStage := 1
+        else
+            breakType  := "BOS"
+            breakColor := c_bosBear
+            structStage := 1
+
+        currentTrend := -1
+        lastBreakBar := bar_index
+
+        // Visual Line & Label Drawing
+        bool allowDraw = (breakType == "BOS" and i_showBOS) or 
+                         (breakType == "iBOS" and i_showIBOS) or 
+                         (breakType == "FT" and canDrawFT)
+
+        if allowDraw
+            lineStyle = breakType == "BOS" ? line.style_solid : 
+                        breakType == "iBOS" ? line.style_dashed : line.style_dotted
+            lineWidth = breakType == "BOS" ? 2 : 1
+            
+            line.new(
+                x1=activeLowBar, y1=activeLow, 
+                x2=bar_index, y2=activeLow, 
+                color=breakColor, 
+                style=lineStyle, 
+                width=lineWidth
+            )
+            
+            label.new(
+                x=math.round((activeLowBar + bar_index) / 2), 
+                y=activeLow, 
+                text=breakType + " " + currentTfStr, 
+                style=label.style_label_up, 
+                color=color.new(breakColor, 20), 
+                textcolor=color.white, 
+                size=size.tiny
+            )
+
+        // ----------------------------------------------------------------------
+        // ZONE CANDLE MODEL: SUPPLY ZONE CREATION
+        // Origin of displacement is the base candle at activeHighBar
+        // ----------------------------------------------------------------------
+        if i_showSD and not na(activeHighBar) and activeHighBar < bar_index
+            int originOffset = bar_index - activeHighBar
+            if originOffset >= 0 and originOffset < 500
+                // Supply Zone Boundaries:
+                // Top: High of the base candle at swing high
+                // Bottom: Lowest of Open/Close of base candle (candle body bottom)
+                float sTop = high[originOffset]
+                float sBot = math.min(open[originOffset], close[originOffset])
+                
+                // Ensure valid non-zero zone height
+                if sTop <= sBot
+                    sBot := sTop - (ta.atr(14) * 0.3)
+
+                box supplyBox = box.new(
+                    left=activeHighBar, 
+                    top=sTop, 
+                    right=bar_index + 20, 
+                    bottom=sBot, 
+                    bgcolor=color.new(c_supply, 85), 
+                    border_color=color.new(c_supply, 25), 
+                    border_width=1, 
+                    border_style=line.style_solid
+                )
+                
+                label supplyLbl = label.new(
+                    x=bar_index + 10, 
+                    y=sBot, 
+                    text="SUPPLY [" + breakType + "] " + currentTfStr, 
+                    style=label.style_label_left, 
+                    color=color.new(c_supply, 10), 
+                    textcolor=color.white, 
+                    size=size.tiny
+                )
+
+                // Enforce maximum active zones buffer
+                if array.size(activeZones) >= i_maxZones
+                    ZoneData oldZ = array.shift(activeZones)
+                    box.delete(oldZ.bBox)
+                    label.delete(oldZ.bLbl)
+
+                array.push(activeZones, ZoneData.new(supplyBox, supplyLbl, sTop, sBot, false, true, activeHighBar))
+
+        lastBrokenLow := activeLow
+        activeLow     := na // Invalidate broken pivot so it is not re-broken
+
+// ==============================================================================
+// 6. ZONE INVALIDATION & EXTENSION ENGINE
+// ==============================================================================
+if isConfirmed and array.size(activeZones) > 0
+    for i = array.size(activeZones) - 1 to 0
+        ZoneData z = array.get(activeZones, i)
+        if z.isActive
+            // Invalidation Check: Full candle body closes through the zone boundary
+            bool invalidated = false
+            if z.isDemand and close < z.botPrice
+                invalidated := true
+            else if not z.isDemand and close > z.topPrice
+                invalidated := true
+
+            if invalidated
+                z.isActive := false
+                box.set_bgcolor(z.bBox, c_dimmed)
+                box.set_border_color(z.bBox, color.new(#64748b, 40))
+                box.set_border_style(z.bBox, line.style_dotted)
+                box.set_right(z.bBox, bar_index)
+                label.set_color(z.bLbl, color.new(#334155, 30))
+                label.set_textcolor(z.bLbl, #94a3b8)
+                label.set_text(z.bLbl, (z.isDemand ? "MITIGATED DEMAND " : "MITIGATED SUPPLY ") + currentTfStr)
+            else
+                // Keep active zones projected to the hard right edge
+                box.set_right(z.bBox, bar_index + 15)
+                label.set_x(z.bLbl, bar_index + 15)
+
+// ==============================================================================
+// 7. HIGHER-TIMEFRAME (HTF) ANCHOR SECURITY ENGINE (STRICT NON-REPAINTING)
+// ==============================================================================
+f_get_htf_pivots(int len) =>
+    float htfHi = ta.pivothigh(high, len, len)[1]
+    float htfLo = ta.pivotlow(low, len, len)[1]
+    float htfCl = close[1]
+    float htfOp = open[1]
+    [htfHi, htfLo, htfCl, htfOp]
+
+[htf1Hi, htf1Lo, htf1Cl, htf1Op] = request.security(
+    syminfo.tickerid, 
+    htfTf1, 
+    f_get_htf_pivots(i_pivotLen), 
+    barmerge.gaps_off, 
+    barmerge.lookahead_off
+)
+
+var float lastHtf1High = na
+var float lastHtf1Low  = na
+if not na(htf1Hi)
+    lastHtf1High := htf1Hi
+if not na(htf1Lo)
+    lastHtf1Low  := htf1Lo
+
+// Draw HTF Anchor Lines if enabled
+var line htfHighLine = na
+var line htfLowLine  = na
+
+if i_showHTF and barstate.islast
+    if not na(lastHtf1High)
+        line.delete(htfHighLine)
+        htfHighLine := line.new(
+            x1=bar_index - 60, y1=lastHtf1High, 
+            x2=bar_index + 20, y2=lastHtf1High, 
+            color=color.new(c_supply, 30), 
+            style=line.style_dashed, 
+            width=2
+        )
+    if not na(lastHtf1Low)
+        line.delete(htfLowLine)
+        htfLowLine := line.new(
+            x1=bar_index - 60, y1=lastHtf1Low, 
+            x2=bar_index + 20, y2=lastHtf1Low, 
+            color=color.new(c_demand, 30), 
+            style=line.style_dashed, 
+            width=2
+        )
+
+// ==============================================================================
+// 8. INSTITUTIONAL HUD & TELEMETRY TABLE
+// ==============================================================================
+var table hudTable = table.new(position.top_right, 2, 7, 
+                     bgcolor=color.new(#030712, 15), 
+                     border_color=color.new(#ffffff, 85), 
+                     border_width=1)
+
+if i_showHUD and barstate.islast
+    table.cell(hudTable, 0, 0, "BlueX SMC Genesis", bgcolor=color.new(#090e1a, 0), text_color=#f59e0b, text_size=size.small)
+    table.cell(hudTable, 1, 0, "Telemetry Engine", bgcolor=color.new(#090e1a, 0), text_color=#94a3b8, text_size=size.small)
+
+    table.cell(hudTable, 0, 1, "Operational Mode", text_color=#94a3b8, text_size=size.tiny)
+    table.cell(hudTable, 1, 1, i_mode, text_color=#38bdf8, text_size=size.tiny)
+
+    table.cell(hudTable, 0, 2, "Market Bias", text_color=#94a3b8, text_size=size.tiny)
+    biasStr   = currentTrend == 1 ? "BULLISH" : currentTrend == -1 ? "BEARISH" : "NEUTRAL"
+    biasColor = currentTrend == 1 ? #10b981 : currentTrend == -1 ? #ef4444 : #94a3b8
+    table.cell(hudTable, 1, 2, biasStr, text_color=biasColor, text_size=size.tiny)
+
+    table.cell(hudTable, 0, 3, "Next Structure Target", text_color=#94a3b8, text_size=size.tiny)
+    nextTargetStr = structStage == 0 ? "BOS" : (structStage == 1 ? "iBOS" : (canDrawFT ? "FT" : "BOS"))
+    table.cell(hudTable, 1, 3, nextTargetStr, text_color=#fbbf24, text_size=size.tiny)
+
+    table.cell(hudTable, 0, 4, "Active Swing High", text_color=#94a3b8, text_size=size.tiny)
+    shText = not na(activeHigh) ? str.tostring(activeHigh, "#.##") : "Searching..."
+    table.cell(hudTable, 1, 4, shText, text_color=#f43f5e, text_size=size.tiny)
+
+    table.cell(hudTable, 0, 5, "Active Swing Low", text_color=#94a3b8, text_size=size.tiny)
+    slText = not na(activeLow) ? str.tostring(activeLow, "#.##") : "Searching..."
+    table.cell(hudTable, 1, 5, slText, text_color=#10b981, text_size=size.tiny)
+
+    table.cell(hudTable, 0, 6, "FT Engine State", text_color=#94a3b8, text_size=size.tiny)
+    ftStatus = isM3 ? "DEACTIVATED (M3 Rule)" : (i_showFT ? "ACTIVE (M15+)" : "DISABLED")
+    table.cell(hudTable, 1, 6, ftStatus, text_color=isM3 ? #f59e0b : #10b981, text_size=size.tiny)
+
+// ==============================================================================
+// 9. WEBHOOK & QUANTITATIVE ALERT DISPATCH PROTOCOL
+// ==============================================================================
+if isConfirmed and (isBullBreak or isBearBreak)
+    string dirStr   = isBullBreak ? "BUY" : "SELL"
+    float  trigPrc  = close
+    string jsonMsg  = '{"source":"bluex_smc_genesis","event":"' + breakType + '","tf":"' + currentTfStr + '","dir":"' + dirStr + '","price":' + str.tostring(trigPrc, "#.##") + ',"bar_index":' + str.tostring(bar_index) + '}'
+    alert(jsonMsg, alert.freq_once_per_bar_close)
+
+alertcondition(isBullBreak and breakType == "BOS",  title="Bullish BOS Confirmed",  message="BlueX Bullish BOS Confirmed on Close")
+alertcondition(isBearBreak and breakType == "BOS",  title="Bearish BOS Confirmed",  message="BlueX Bearish BOS Confirmed on Close")
+alertcondition(isBullBreak and breakType == "iBOS", title="Bullish iBOS Confirmed", message="BlueX Bullish iBOS Confirmed on Close")
+alertcondition(isBearBreak and breakType == "iBOS", title="Bearish iBOS Confirmed", message="BlueX Bearish iBOS Confirmed on Close")
+alertcondition(isBullBreak and breakType == "FT",   title="Bullish FT Confirmed",   message="BlueX Bullish FT Confirmed on Close")
+alertcondition(isBearBreak and breakType == "FT",   title="Bearish FT Confirmed",   message="BlueX Bearish FT Confirmed on Close")
