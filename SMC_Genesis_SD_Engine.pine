@@ -18,11 +18,11 @@ int    i_pivotLen = input.int(5, "Swing Pivot Strength (V-Shape Wing Length)", m
 
 string G_VIS      = "Visual Form Model & Nomenclature"
 string i_labelMode= input.string("Institutional (EST / MTF / LTF / FT)", "Label Notation Model",
-                     options=["Institutional (EST / MTF / LTF / FT)", "Structural (BOS / iBOS / FT)"], group=G_VIS)
+                     options=["Institutional (EST / MTF / LTF / FT)", "SMC Genesis (BOS / iBOS / FT)"], group=G_VIS)
 bool   i_showEST  = input.bool(true, "Show External Structure Range (EST.H / EST.L)", group=G_VIS)
-bool   i_showInt  = input.bool(true, "Show Internal Structure Breaks (MTF / LTF)", group=G_VIS)
-bool   i_showFT   = input.bool(true, "Show Failure to Traverse (FT - M15+ Only)", group=G_VIS,
-                     tooltip="FT tracks micro internal breaks within an impulse move. Strictly deactivated on M3.")
+bool   i_showInt  = input.bool(true, "Show Internal Structure Breaks (MTF / LTF / iBOS)", group=G_VIS)
+bool   i_showFT   = input.bool(true, "Show Fractal Structure (FT / FTS - M15+ Only)", group=G_VIS,
+                     tooltip="Fractal Structure (FT) tracks micro-breaks within an iBOS move. Strictly deactivated on M3.")
 bool   i_showSD   = input.bool(true, "Show Supply & Demand Zones (Zone Candle Model)", group=G_VIS)
 bool   i_showStem = input.bool(true, "Show EST Origin Vertical Connector Stem", group=G_VIS)
 bool   i_showHUD  = input.bool(true, "Show Telemetry HUD Dashboard", group=G_VIS)
@@ -32,28 +32,28 @@ string G_ALERT    = "Execution Bridge & Webhook Gateway"
 string i_secret   = input.string("BLUEX_QUANT_SECURE_TOKEN_9981", "Webhook Secret Bearer Token", group=G_ALERT)
 float  i_riskPct  = input.float(1.0, "Account Risk %", minval=0.1, maxval=3.0, step=0.1, group=G_ALERT)
 
-string G_THEME    = "Institutional Color Palette"
-color  c_est      = input.color(#ef5350, "EST Range Bounds (Coral Red)", group=G_THEME)
-color  c_labelTxt = input.color(#fbbf24, "Label Font Color (Gold/Yellow)", group=G_THEME)
-color  c_pillBg   = input.color(color.new(#18181b, 20), "Internal Label Pill Background", group=G_THEME)
-color  c_intLine  = input.color(#94a3b8, "Internal Break Line Color (Slate)", group=G_THEME)
-color  c_ftLine   = input.color(#d97706, "FT Line Color (Amber)", group=G_THEME)
-color  c_demand   = input.color(#10b981, "Demand Zone (Emerald)", group=G_THEME)
-color  c_supply   = input.color(#ef4444, "Supply Zone (Rose)", group=G_THEME)
+string G_THEME    = "Institutional Visual Palette (Dark-Mode Luxury)"
+color  c_est      = input.color(#ef5350, "EST Range Line Color (Coral Red)", group=G_THEME)
+color  c_labelTxt = input.color(#fbbf24, "Label Text Color (Amber Gold)", group=G_THEME)
+color  c_pillBg   = input.color(color.new(#18181b, 20), "Pill Label Background", group=G_THEME)
+color  c_intLine  = input.color(#94a3b8, "Internal Break Line (Slate)", group=G_THEME)
+color  c_ftLine   = input.color(#d97706, "FT Micro Break Line (Dark Amber)", group=G_THEME)
+color  c_demand   = input.color(#10b981, "Institutional Demand (Emerald)", group=G_THEME)
+color  c_supply   = input.color(#ef4444, "Institutional Supply (Rose)", group=G_THEME)
 color  c_dimmed   = input.color(#64748b, "Mitigated Zone Color", group=G_THEME)
 
 // ==============================================================================
-// 2. TIMEFRAME CLASSIFICATION & FT FILTER RULE
+// 2. TIMEFRAME CLASSIFICATION & CANONICAL FT FILTER RULE
 // ==============================================================================
 bool isM3  = timeframe.isminutes and timeframe.multiplier == 3
 bool isM15 = timeframe.isminutes and timeframe.multiplier == 15
 
-// Mechanical Rule: FT strictly prohibited on M3; active on M15 and higher
+// Canonical Law: On M3 (LTF), objectives are strictly BOS and iBOS. FT is prohibited.
 bool canDrawFT = not isM3 and i_showFT
 
-// Structural Nomenclature mapping based on timeframe
-string internalTag = isM3 ? "LTF" : isM15 ? "MTF" : "INT"
-if i_labelMode == "Structural (BOS / iBOS / FT)"
+// Resolve dynamic tags
+string internalTag = isM3 ? "LTF" : isM15 ? "MTF" : "iBOS"
+if i_labelMode == "SMC Genesis (BOS / iBOS / FT)"
     internalTag := "iBOS"
 
 string majorTag = i_labelMode == "Institutional (EST / MTF / LTF / FT)" ? "EST" : "BOS"
@@ -76,25 +76,25 @@ type ZoneData
 var ZoneData[] activeZones = array.new<ZoneData>(0)
 
 // ==============================================================================
-// 4. V-SHAPE PIVOT DETECTION (NON-REPAINTING)
+// 4. SWING PIVOT DETECTION (SYMMETRICAL V-SHAPE ENGINE)
 // ==============================================================================
 float rawPivotHigh = ta.pivothigh(high, i_pivotLen, i_pivotLen)
 float rawPivotLow  = ta.pivotlow(low, i_pivotLen, i_pivotLen)
 
-// Active swing pivot levels waiting to be broken
+// Active swing pivot coordinates waiting for full candle-body confirmation
 var float activeHigh    = na
 var int   activeHighBar = na
 var float activeLow     = na
 var int   activeLowBar  = na
 
-// External Structure (Dealing Range extremes: EST.H & EST.L)
+// External Structure Range (Dealing Range Bounds: EST.H & EST.L)
 var float estHigh       = na
 var int   estHighBar    = na
 var float estLow        = na
 var int   estLowBar     = na
 var int   estOriginBar  = na
 
-// Persistent lines for the active External Structure dealing range
+// Persistent visual elements for the External Structure bracket
 var line estHighLine = na
 var line estLowLine  = na
 var line estStemLine = na
@@ -102,14 +102,14 @@ var label estHighLbl = na
 var label estLowLbl  = na
 
 // Structural State Machine:
-// 0 = Seeking EST/BOS
-// 1 = Seeking Internal Break (MTF/LTF/iBOS)
-// 2 = Seeking Micro Break (FT on M15+)
+// 0 = Seeking Major BOS / EST
+// 1 = Seeking Internal iBOS / MTF / LTF
+// 2 = Seeking Micro FT (Active on M15+ only)
 var int structStage  = 0
 var int currentTrend = 0 // 1 = Bullish, -1 = Bearish
 var int lastBreakBar = 0
 
-// Capture confirmed V-shape pivots
+// Track confirmed symmetrical V-shape pivots
 if not na(rawPivotHigh)
     int pBar = bar_index - i_pivotLen
     activeHigh    := rawPivotHigh
@@ -127,8 +127,9 @@ if not na(rawPivotLow)
         estLowBar := pBar
 
 // ==============================================================================
-// 5. MECHANICAL STRUCTURE BREAK ENGINE (EST, MTF, LTF, FT)
+// 5. MECHANICAL STRUCTURE BREAK ENGINE (EST/BOS, MTF/LTF/iBOS, FT)
 // ==============================================================================
+// Strict Non-Repainting Mandate: Body close confirmation strictly on confirmed bar
 bool isConfirmed = barstate.isconfirmed
 
 bool isBullBreak = false
@@ -146,17 +147,17 @@ if isConfirmed
     if not na(activeHigh) and not na(activeHighBar) and close > activeHigh
         isBullBreak := true
 
-        // Classify Structural Rank: External (EST) vs Internal (MTF/LTF) vs Micro (FT)
+        // Classify Structural Rank: Major External (EST) vs Internal (iBOS) vs Micro (FT)
         bool isExternalBreak = (not na(estHigh) and activeHigh >= estHigh) or activeHighBar < lastBreakBar or currentTrend <= 0 or structStage == 0
 
         if isExternalBreak
             breakEvent   := "EST"
             displayLabel := majorTag
-            structStage  := 1
+            structStage  := 1 // Progress to internal pullback watching
             currentTrend := 1
             lastBreakBar := bar_index
 
-            // Update External Structure Dealing Range (EST.H & EST.L)
+            // Update External Structure Range Bounds
             estHigh      := activeHigh
             estHighBar   := activeHighBar
             if not na(activeLow)
@@ -171,7 +172,7 @@ if isConfirmed
         else if structStage == 2 and canDrawFT
             breakEvent   := "FT"
             displayLabel := ftTag
-            structStage  := 1
+            structStage  := 1 // Reset back to internal progression
             lastBreakBar := bar_index
         else
             breakEvent   := internalTag
@@ -179,7 +180,7 @@ if isConfirmed
             structStage  := 1
             lastBreakBar := bar_index
 
-        // Visual Line & Dark Pill Drawing
+        // Visual Break Line & Dark Pill Drawing
         bool drawInternal = (breakEvent == internalTag and i_showInt) or (breakEvent == "FT" and canDrawFT)
 
         if drawInternal
@@ -189,7 +190,7 @@ if isConfirmed
 
         // ----------------------------------------------------------------------
         // ZONE CANDLE MODEL: DEMAND ZONE CREATION
-        // Origin base candle is located at activeLowBar
+        // Base candle located at activeLowBar (the displacement origin)
         // ----------------------------------------------------------------------
         if i_showSD and not na(activeLowBar) and activeLowBar < bar_index
             int originOffset = math.min(math.max(0, bar_index - activeLowBar), 499)
@@ -212,7 +213,7 @@ if isConfirmed
 
             array.push(activeZones, ZoneData.new(demandBox, demandLbl, dTop, dBot, true, true, activeLowBar))
 
-        activeHigh := na // Invalidate broken pivot
+        activeHigh := na // Invalidate broken pivot level
 
     // --------------------------------------------------------------------------
     // BEARISH BREAK: Full Candle-Body Close Below Active Swing Low
@@ -229,7 +230,6 @@ if isConfirmed
             currentTrend := -1
             lastBreakBar := bar_index
 
-            // Update External Structure Dealing Range (EST.H & EST.L)
             estLow       := activeLow
             estLowBar    := activeLowBar
             if not na(activeHigh)
@@ -252,7 +252,6 @@ if isConfirmed
             structStage  := 1
             lastBreakBar := bar_index
 
-        // Visual Line & Dark Pill Drawing
         bool drawInternal = (breakEvent == internalTag and i_showInt) or (breakEvent == "FT" and canDrawFT)
 
         if drawInternal
@@ -262,7 +261,7 @@ if isConfirmed
 
         // ----------------------------------------------------------------------
         // ZONE CANDLE MODEL: SUPPLY ZONE CREATION
-        // Origin base candle is located at activeHighBar
+        // Base candle located at activeHighBar (the displacement origin)
         // ----------------------------------------------------------------------
         if i_showSD and not na(activeHighBar) and activeHighBar < bar_index
             int originOffset = math.min(math.max(0, bar_index - activeHighBar), 499)
@@ -285,7 +284,7 @@ if isConfirmed
 
             array.push(activeZones, ZoneData.new(supplyBox, supplyLbl, sTop, sBot, false, true, activeHighBar))
 
-        activeLow := na // Invalidate broken pivot
+        activeLow := na // Invalidate broken pivot level
 
 // ==============================================================================
 // 6. EXTERNAL STRUCTURE BRACKET & STEM (EST.H / EST.L)
@@ -307,7 +306,7 @@ if i_showEST and barstate.islast
         estLowLine := line.new(x1=startL, y1=estLow, x2=bar_index + 20, y2=estLow, color=c_est, style=line.style_solid, width=1)
         estLowLbl  := label.new(x=bar_index + 20, y=estLow, text="EST.L", style=label.style_label_left, color=color.new(#000000, 100), textcolor=c_labelTxt, size=size.tiny)
 
-    // Vertical origin connector stem
+    // Vertical origin connector stem (Inverted-L Range Bracket)
     if i_showStem and not na(estOriginBar) and not na(estHigh) and not na(estLow)
         int stemX = math.max(0, estOriginBar)
         estStemLine := line.new(x1=stemX, y1=estLow, x2=stemX, y2=estHigh, color=c_est, style=line.style_solid, width=1)
