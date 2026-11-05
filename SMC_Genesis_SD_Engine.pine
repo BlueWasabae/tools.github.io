@@ -1,40 +1,23 @@
 //@version=5
-indicator("BlueX SMC Genesis Institutional Engine [XAU/USD]", 
-          shorttitle="BlueX SMC Genesis", 
-          overlay=true, 
-          max_bars_back=500, 
-          max_boxes_count=500, 
-          max_lines_count=500, 
-          max_labels_count=500)
+indicator("BlueX SMC Genesis Institutional Engine [XAU/USD]", shorttitle="BlueX SMC Genesis", overlay=true, max_bars_back=500, max_boxes_count=500, max_lines_count=500, max_labels_count=500)
 
 // ==============================================================================
 // 1. ARCHITECTURAL INPUTS & TIMEFRAME CONFIGURATION
 // ==============================================================================
-string G_MODE     = "Operational Hierarchy & Timeframe Architecture"
-string i_mode     = input.string("Day Trade (M15 / M3)", "Trading Hierarchy", 
-                     options=["Day Trade (M15 / M3)", "Swing Trade (H4 / H1 / M15)"], group=G_MODE)
-int    i_swingLen = input.int(5, "Swing Pivot Strength (V-Shape Curve Wing Length)", minval=2, maxval=20, group=G_MODE,
-                     tooltip="Number of bars required on each side to confirm symmetrical V-shape major swing origin.")
-int    i_intLen   = input.int(3, "Internal Pivot Strength (iBOS Wing Length)", minval=1, maxval=10, group=G_MODE,
-                     tooltip="Number of bars required on each side to confirm internal structure swings.")
-string i_zoneCandleModel = input.string("Full Candle Range (High to Low)", "S&D Zone Candle Model",
-                     options=["Full Candle Range (High to Low)", "Candle Body (Body to Wick)"], group=G_MODE,
-                     tooltip="Lowest candle for Demand, highest candle for Supply at curve displacement origin.")
+string G_MODE            = "Operational Hierarchy & Timeframe Architecture"
+string i_mode            = input.string("Day Trade (M15 / M3)", "Trading Hierarchy", options=["Day Trade (M15 / M3)", "Swing Trade (H4 / H1 / M15)"], group=G_MODE)
+int    i_swingLen        = input.int(5, "Swing Pivot Strength (V-Shape Curve Wing Length)", minval=2, maxval=20, group=G_MODE, tooltip="Number of bars required on each side to confirm symmetrical V-shape major swing origin.")
+int    i_intLen          = input.int(3, "Internal Pivot Strength (iBOS Wing Length)", minval=1, maxval=10, group=G_MODE, tooltip="Number of bars required on each side to confirm internal structure swings.")
+string i_zoneCandleModel = input.string("Full Candle Range (High to Low)", "S&D Zone Candle Model", options=["Full Candle Range (High to Low)", "Candle Body (Body to Wick)"], group=G_MODE, tooltip="Lowest candle for Demand, highest candle for Supply at curve displacement origin.")
 
 string G_VIS      = "Visual Form Model & Nomenclature"
-string i_labelMode= input.string("Institutional (EST / MTF / LTF / FT)", "Label Notation Model",
-                     options=["Institutional (EST / MTF / LTF / FT)", "SMC Genesis (BOS / iBOS / FT)"], group=G_VIS)
-bool   i_showEST  = input.bool(true, "Show Dealing Range (EST.H / EST.L)", group=G_VIS,
-                     tooltip="External Structure Range. Automatically removes old EST when a new BOS confirms.")
-bool   i_showBOS  = input.bool(true, "Show Major Structure Breaks (BOS)", group=G_VIS,
-                     tooltip="Solid white line across broken swing curve with centered yellow label.")
+string i_labelMode= input.string("Institutional (EST / MTF / LTF / FT)", "Label Notation Model", options=["Institutional (EST / MTF / LTF / FT)", "SMC Genesis (BOS / iBOS / FT)"], group=G_VIS)
+bool   i_showEST  = input.bool(true, "Show Dealing Range (EST.H / EST.L)", group=G_VIS, tooltip="External Structure Range. Automatically removes old EST when a new BOS confirms.")
+bool   i_showBOS  = input.bool(true, "Show Major Structure Breaks (BOS)", group=G_VIS, tooltip="Solid white line across broken swing curve with centered yellow label.")
 bool   i_showInt  = input.bool(true, "Show Internal Structure Breaks (iBOS / MTF / LTF)", group=G_VIS)
-bool   i_showFT   = input.bool(true, "Show Fractal Structure (FT / FTS - M15+ Only)", group=G_VIS,
-                     tooltip="Fractal Structure (FT) micro-breaks within an iBOS move. Strictly deactivated on M3.")
-bool   i_showSD   = input.bool(true, "Show Supply & Demand Zones (Fresh Untouched Only)", group=G_VIS,
-                     tooltip="Fresh zones created from curve origins. Removed immediately once touched by candle wick or body.")
-bool   i_showLiq  = input.bool(true, "Show External Liquidity Pools (BSL / SSL)", group=G_VIS,
-                     tooltip="Previous Day High (BSL) and Previous Day Low (SSL). Non-repainting.")
+bool   i_showFT   = input.bool(true, "Show Fractal Structure (FT / FTS - M15+ Only)", group=G_VIS, tooltip="Fractal Structure (FT) micro-breaks within an iBOS move. Strictly deactivated on M3.")
+bool   i_showSD   = input.bool(true, "Show Supply & Demand Zones (Fresh Untouched Only)", group=G_VIS, tooltip="Fresh zones created from curve origins. Removed immediately once touched by candle wick or body.")
+bool   i_showLiq  = input.bool(true, "Show External Liquidity Pools (BSL / SSL)", group=G_VIS, tooltip="Previous Day High (BSL) and Previous Day Low (SSL). Non-repainting.")
 bool   i_showEq   = input.bool(false, "Show Dealing Range Equilibrium (50%)", group=G_VIS)
 bool   i_showHUD  = input.bool(true, "Show Telemetry HUD Dashboard", group=G_VIS)
 int    i_maxZones = input.int(10, "Maximum Active Fresh S&D Zones", minval=2, maxval=25, group=G_VIS)
@@ -196,10 +179,8 @@ if isConfirmed
                 // 1. Draw BOS Line (White Solid Line with Centered Yellow Text)
                 if i_showBOS
                     int midX = int(math.round((sBar + bar_index) / 2))
-                    line.new(x1=sBar, y1=sPrice, x2=bar_index, y2=sPrice, 
-                             color=c_bosLine, style=line.style_solid, width=1)
-                    label.new(x=midX, y=sPrice, text=dispTag, 
-                              style=label.style_none, textcolor=c_bosText, size=size.small)
+                    line.new(x1=sBar, y1=sPrice, x2=bar_index, y2=sPrice, color=c_bosLine, style=line.style_solid, width=1)
+                    label.new(x=midX, y=sPrice, text=dispTag, style=label.style_none, textcolor=c_bosText, size=size.small)
 
                 // 2. Locate Curve Origin Low (the lowest candle between sBar and bar_index)
                 int lowestCandleBar = sBar
@@ -230,18 +211,14 @@ if isConfirmed
                     // Draw solid red line at EST.L (curve origin low)
                     estLow      := minLowPrice
                     estLowBar   := lowestCandleBar
-                    estLowLine  := line.new(x1=lowestCandleBar, y1=estLow, x2=bar_index + 25, y2=estLow, 
-                                            color=c_estLine, style=line.style_solid, width=1)
-                    estLowLbl   := label.new(x=bar_index + 25, y=estLow, text="EST.L", 
-                                             style=label.style_none, textcolor=c_estLine, size=size.tiny)
+                    estLowLine  := line.new(x1=lowestCandleBar, y1=estLow, x2=bar_index + 25, y2=estLow, color=c_estLine, style=line.style_solid, width=1)
+                    estLowLbl   := label.new(x=bar_index + 25, y=estLow, text="EST.L", style=label.style_none, textcolor=c_estLine, size=size.tiny)
 
                     // Initialize dynamic EST.H at current impulse high
                     estHigh     := high
                     estHighBar  := bar_index
-                    estHighLine := line.new(x1=bar_index, y1=estHigh, x2=bar_index + 25, y2=estHigh, 
-                                            color=c_estLine, style=line.style_solid, width=1)
-                    estHighLbl  := label.new(x=bar_index + 25, y=estHigh, text="EST.H", 
-                                             style=label.style_none, textcolor=c_estLine, size=size.tiny)
+                    estHighLine := line.new(x1=bar_index, y1=estHigh, x2=bar_index + 25, y2=estHigh, color=c_estLine, style=line.style_solid, width=1)
+                    estHighLbl  := label.new(x=bar_index + 25, y=estHigh, text="EST.H", style=label.style_none, textcolor=c_estLine, size=size.tiny)
 
                 // 4. Demand Zone Creation (Bullish Structure ONLY)
                 // Rule: "drawing Demand is for Bullish Structure"
@@ -255,9 +232,7 @@ if isConfirmed
                     activeZoneTop := dTop
                     activeZoneBot := dBot
 
-                    box demandBox = box.new(left=lowestCandleBar, top=dTop, right=bar_index + 20, bottom=dBot,
-                                            bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid,
-                                            text=dispTag, text_size=size.small, text_color=c_bosText)
+                    box demandBox = box.new(left=lowestCandleBar, top=dTop, right=bar_index + 20, bottom=dBot, bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid, text=dispTag, text_size=size.small, text_color=c_bosText)
 
                     if array.size(activeZones) >= i_maxZones
                         ZoneData oldZ = array.shift(activeZones)
@@ -291,10 +266,8 @@ if isConfirmed
                 // 1. Draw BOS Line (White Solid Line with Centered Yellow Text)
                 if i_showBOS
                     int midX = int(math.round((sBar + bar_index) / 2))
-                    line.new(x1=sBar, y1=sPrice, x2=bar_index, y2=sPrice, 
-                             color=c_bosLine, style=line.style_solid, width=1)
-                    label.new(x=midX, y=sPrice, text=dispTag, 
-                              style=label.style_none, textcolor=c_bosText, size=size.small)
+                    line.new(x1=sBar, y1=sPrice, x2=bar_index, y2=sPrice, color=c_bosLine, style=line.style_solid, width=1)
+                    label.new(x=midX, y=sPrice, text=dispTag, style=label.style_none, textcolor=c_bosText, size=size.small)
 
                 // 2. Locate Curve Origin High (the highest candle between sBar and bar_index)
                 int highestCandleBar = sBar
@@ -325,18 +298,14 @@ if isConfirmed
                     // Draw solid red line at EST.H (curve origin high)
                     estHigh     := maxHighPrice
                     estHighBar  := highestCandleBar
-                    estHighLine := line.new(x1=highestCandleBar, y1=estHigh, x2=bar_index + 25, y2=estHigh, 
-                                            color=c_estLine, style=line.style_solid, width=1)
-                    estHighLbl  := label.new(x=bar_index + 25, y=estHigh, text="EST.H", 
-                                             style=label.style_none, textcolor=c_estLine, size=size.tiny)
+                    estHighLine := line.new(x1=highestCandleBar, y1=estHigh, x2=bar_index + 25, y2=estHigh, color=c_estLine, style=line.style_solid, width=1)
+                    estHighLbl  := label.new(x=bar_index + 25, y=estHigh, text="EST.H", style=label.style_none, textcolor=c_estLine, size=size.tiny)
 
                     // Initialize dynamic EST.L at current impulse low
                     estLow      := low
                     estLowBar   := bar_index
-                    estLowLine  := line.new(x1=bar_index, y1=estLow, x2=bar_index + 25, y2=estLow, 
-                                            color=c_estLine, style=line.style_solid, width=1)
-                    estLowLbl   := label.new(x=bar_index + 25, y=estLow, text="EST.L", 
-                                             style=label.style_none, textcolor=c_estLine, size=size.tiny)
+                    estLowLine  := line.new(x1=bar_index, y1=estLow, x2=bar_index + 25, y2=estLow, color=c_estLine, style=line.style_solid, width=1)
+                    estLowLbl   := label.new(x=bar_index + 25, y=estLow, text="EST.L", style=label.style_none, textcolor=c_estLine, size=size.tiny)
 
                 // 4. Supply Zone Creation (Bearish Structure ONLY)
                 // Rule: "supply is for bearish Structure"
@@ -350,9 +319,7 @@ if isConfirmed
                     activeZoneTop := sTop
                     activeZoneBot := sBot
 
-                    box supplyBox = box.new(left=highestCandleBar, top=sTop, right=bar_index + 20, bottom=sBot,
-                                            bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid,
-                                            text=dispTag, text_size=size.small, text_color=c_bosText)
+                    box supplyBox = box.new(left=highestCandleBar, top=sTop, right=bar_index + 20, bottom=sBot, bgcolor=c_zoneBg, border_color=c_zoneBrd, border_width=1, border_style=line.style_solid, text=dispTag, text_size=size.small, text_color=c_bosText)
 
                     if array.size(activeZones) >= i_maxZones
                         ZoneData oldZ = array.shift(activeZones)
@@ -452,10 +419,8 @@ if i_showEST
         if barstate.islast
             line.delete(eqLine)
             label.delete(eqLbl)
-            eqLine := line.new(x1=eqStart, y1=eqLevel, x2=bar_index + 25, y2=eqLevel, 
-                               color=c_eqLine, style=line.style_dashed, width=1)
-            eqLbl  := label.new(x=bar_index + 25, y=eqLevel, text="EQ 50%", 
-                                style=label.style_none, textcolor=c_eqLine, size=size.tiny)
+            eqLine := line.new(x1=eqStart, y1=eqLevel, x2=bar_index + 25, y2=eqLevel, color=c_eqLine, style=line.style_dashed, width=1)
+            eqLbl  := label.new(x=bar_index + 25, y=eqLevel, text="EQ 50%", style=label.style_none, textcolor=c_eqLine, size=size.tiny)
 
 // ==============================================================================
 // 7. S&D ZONE MITIGATION & TOUCH DELETION ENGINE
@@ -507,15 +472,11 @@ if i_showLiq and not timeframe.isdaily and not timeframe.isweekly
         label.delete(pdhLbl)
         label.delete(pdlLbl)
 
-        pdhLine := line.new(x1=bar_index - 50, y1=dHigh, x2=bar_index + 25, y2=dHigh, 
-                            color=c_bsl, style=line.style_solid, width=1)
-        pdhLbl  := label.new(x=bar_index + 25, y=dHigh, text="BSL [PDH]", 
-                             style=label.style_none, textcolor=c_bsl, size=size.tiny)
+        pdhLine := line.new(x1=bar_index - 50, y1=dHigh, x2=bar_index + 25, y2=dHigh, color=c_bsl, style=line.style_solid, width=1)
+        pdhLbl  := label.new(x=bar_index + 25, y=dHigh, text="BSL [PDH]", style=label.style_none, textcolor=c_bsl, size=size.tiny)
 
-        pdlLine := line.new(x1=bar_index - 50, y1=dLow, x2=bar_index + 25, y2=dLow, 
-                            color=c_ssl, style=line.style_solid, width=1)
-        pdlLbl  := label.new(x=bar_index + 25, y=dLow, text="SSL [PDL]", 
-                             style=label.style_none, textcolor=c_ssl, size=size.tiny)
+        pdlLine := line.new(x1=bar_index - 50, y1=dLow, x2=bar_index + 25, y2=dLow, color=c_ssl, style=line.style_solid, width=1)
+        pdlLbl  := label.new(x=bar_index + 25, y=dLow, text="SSL [PDL]", style=label.style_none, textcolor=c_ssl, size=size.tiny)
 
 // ==============================================================================
 // 9. TELEMETRY HUD TABLE
